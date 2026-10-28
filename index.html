@@ -1,0 +1,2264 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ALI Mission Control</title>
+<style>
+:root{
+  --bg:#000; --header:#222; --line:#1b1b1b; --line2:#262626;
+  --text:#e9e9e9; --dim:#8b8b8b; --dim2:#5e5e5e;
+  --cyan:#22d3ee; --blue:#4f8cff; --violet:#a78bfa; --teal:#2dd4bf;
+  --amber:#fbbf24; --rose:#fb7185; --green:#34d399;
+  --nav-h:58px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Vazirmatn",Tahoma,system-ui,sans-serif;
+  font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:none;
+}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+a{color:var(--cyan);text-decoration:none;word-break:break-all}
+svg{display:block}
+
+/* ---------- shell ---------- */
+.shell{display:flex;min-height:100dvh}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100dvh}
+
+/* ---------- rail (desktop) ---------- */
+.rail{display:none;flex-direction:column;flex:none;width:220px;background:#0a0a0a;border-inline-end:1px solid var(--line);
+  padding:14px 10px calc(14px + env(safe-area-inset-bottom));gap:4px;position:sticky;top:0;height:100dvh;transition:width .18s}
+.rail.collapsed{width:66px}
+.rail .rail-top{display:flex;align-items:center;gap:10px;padding:4px 6px 14px}
+.rail .logo{font-weight:800;font-size:14px;letter-spacing:.6px;color:#fff;padding:6px 9px;border-radius:9px;
+  background:linear-gradient(135deg,rgba(34,211,238,.18),rgba(167,139,250,.18));border:1px solid rgba(34,211,238,.35);
+  box-shadow:0 0 12px rgba(34,211,238,.18)}
+.rail .rail-name{font-size:12px;color:var(--dim);font-weight:600;white-space:nowrap;overflow:hidden}
+.rail.collapsed .rail-name{display:none}
+.railitem{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:11px;color:var(--dim);font-size:13.5px;font-weight:600;width:100%;text-align:start}
+.railitem svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.railitem:hover{background:#141414;color:#ddd}
+.railitem.on{background:rgba(34,211,238,.1);color:var(--cyan)}
+.rail.collapsed .railitem span{display:none}
+.rail.collapsed .railitem{justify-content:center;padding:11px 0}
+.rail .spacer{flex:1}
+
+/* ---------- top ---------- */
+.topwrap{position:sticky;top:0;z-index:30;background:var(--header);padding-top:env(safe-area-inset-top);border-bottom:1px solid #171717}
+.topbar{display:flex;align-items:center;gap:8px;padding:6px 8px;min-height:52px}
+.brand{display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-inline-start:6px}
+.brand .logo{font-weight:800;font-size:14px;letter-spacing:.6px;color:#fff;padding:5px 8px;border-radius:9px;
+  background:linear-gradient(135deg,rgba(34,211,238,.18),rgba(167,139,250,.18));border:1px solid rgba(34,211,238,.35);
+  box-shadow:0 0 12px rgba(34,211,238,.18);flex:none}
+.wstitle{font-size:15px;font-weight:650;color:#f2f2f2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topactions{display:flex;align-items:center;gap:2px;flex:none}
+.iconbtn{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;color:#cfcfcf;position:relative}
+.iconbtn:active{background:#2e2e2e}
+.iconbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.iconbtn .dot{position:absolute;top:8px;inset-inline-end:9px;width:7px;height:7px;border-radius:50%;background:var(--cyan);
+  box-shadow:0 0 8px var(--cyan)}
+.iconbtn.avatar{font-size:14px;font-weight:700;color:#00141a;background:linear-gradient(135deg,var(--cyan),var(--blue));width:30px;height:30px;margin-inline-start:5px;border-radius:50%}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:4px;padding:0 8px;overflow-x:auto;scrollbar-width:none;position:relative}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;position:relative;padding:9px 14px 11px;font-size:13.5px;font-weight:600;color:#9a9a9a;white-space:nowrap}
+.tab.on{color:#fff}
+.tab.on::after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:2px;border-radius:2px;
+  background:var(--cyan);box-shadow:0 0 9px var(--cyan)}
+
+/* ---------- content ---------- */
+.content{flex:1;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px)}
+.sec{margin-top:15px}
+.sec:first-child{margin-top:9px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 16px 6px}
+.sec-head h2{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--dim)}
+.seclink{font-size:11.5px;font-weight:700;color:var(--cyan);padding:2px 4px;letter-spacing:.3px}
+
+/* ---------- rows ---------- */
+.rows{display:block}
+.row{display:flex;align-items:flex-start;gap:11px;padding:10px 16px;min-height:54px;border-top:1px solid var(--line);cursor:pointer;position:relative}
+.rows>.row:first-child{border-top:none}
+.row:active{background:#101010}
+.row.empty .row-title{color:var(--dim)}
+.row-main{flex:1;min-width:0;padding-top:1px}
+.row-title{font-size:14.5px;font-weight:550;color:#ededed;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-title.dim{color:var(--dim);font-weight:500}
+.row-title.done{text-decoration:line-through;color:var(--dim2)}
+.row-desc{font-size:12.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+.row-side{display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex:none;padding-top:2px}
+.row-meta{font-size:11px;color:var(--dim2);white-space:nowrap;font-weight:600}
+.row-meta.warn{color:var(--rose)}
+.morebtn{width:26px;height:22px;display:grid;place-items:center;color:var(--dim2);border-radius:6px}
+.morebtn:active{background:#1e1e1e}
+.morebtn svg{width:16px;height:16px;fill:currentColor;stroke:none}
+.morebtn svg circle{fill:currentColor;stroke:none}
+
+/* icons */
+.ico{width:31px;height:31px;border-radius:10px;flex:none;display:grid;place-items:center;color:var(--c,var(--cyan));
+  background:radial-gradient(circle at 32% 24%,rgba(255,255,255,.15),rgba(255,255,255,.02) 62%),#141414;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 -3px 6px rgba(0,0,0,.65),0 2px 7px rgba(0,0,0,.55);
+  margin-top:1px}
+.ico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 0 5px currentColor)}
+
+/* checkbox */
+.checkbox{width:22px;height:22px;border-radius:7px;border:1.6px solid #3a3a3a;display:grid;place-items:center;flex:none;margin-top:3px;color:#00141a}
+.checkbox.on{background:linear-gradient(135deg,var(--cyan),var(--blue));border-color:transparent;box-shadow:0 0 10px rgba(34,211,238,.45)}
+.checkbox svg{width:14px;height:14px;stroke:#00141a;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* chips & misc */
+.chips{display:flex;gap:7px;padding:10px 16px 4px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chipbtn{flex:none;padding:6px 13px;border-radius:999px;background:#141414;border:1px solid #232323;font-size:12.5px;font-weight:600;color:var(--dim)}
+.chipbtn.on{background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.5);color:var(--cyan)}
+.subtabs{display:flex;gap:2px;padding:10px 16px 0}
+.subtab{padding:8px 14px;border-radius:10px 10px 0 0;font-size:13px;font-weight:600;color:var(--dim)}
+.subtab.on{color:#fff;background:#111;border:1px solid var(--line2);border-bottom-color:transparent}
+.pad{padding:14px 16px}
+.wide{width:100%}
+.dimtext{color:var(--dim2);font-size:13px;padding:4px 0}
+
+/* day strip */
+.dayrow{display:flex;gap:12px;padding:9px 16px;border-top:1px solid var(--line);align-items:flex-start;cursor:pointer}
+.rows>.dayrow:first-child{border-top:none}
+.dayrow:active{background:#101010}
+.daylabel{width:44px;flex:none;display:flex;flex-direction:column;align-items:flex-start;line-height:1.15}
+.daylabel b{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.4px}
+.daylabel span{font-size:16px;font-weight:650;color:#e8e8e8}
+.daylabel.today span{color:var(--cyan);text-shadow:0 0 10px rgba(34,211,238,.6)}
+.dayitems{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding-top:1px}
+.chip{font-size:12.5px;color:#cfcfcf;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.empty{color:var(--dim2)}
+.chip.more{color:var(--cyan);font-weight:600;font-size:11.5px}
+
+/* progress */
+.bar{height:6px;border-radius:3px;background:#1a1a1a;overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--blue))}
+.bar.alt>i{background:linear-gradient(90deg,var(--violet),var(--teal))}
+.pvrow{display:flex;align-items:center;gap:12px;padding:11px 16px;border-top:1px solid var(--line)}
+.rows>.pvrow:first-child{border-top:none}
+.pvlabel{font-size:12.5px;color:var(--dim);width:78px;flex:none;font-weight:600}
+.pvmain{flex:1;min-width:0}
+.pvval{font-size:12.5px;color:#ddd;font-weight:650;text-align:end}
+.pvtrack{height:7px;border-radius:4px;background:#161616;overflow:hidden;margin-top:5px}
+.pvtrack>i{display:block;height:100%;border-radius:4px}
+
+/* bottom nav */
+.bottomnav{position:fixed;inset-inline:0;bottom:0;z-index:40;display:flex;
+  background:rgba(14,14,14,.94);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border-top:1px solid #1e1e1e;padding-bottom:env(safe-area-inset-bottom)}
+.navitem{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 6px;color:var(--dim2);
+  font-size:9.5px;font-weight:650;letter-spacing:.2px}
+.navitem svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.navitem.on{color:var(--cyan)}
+.navitem.on svg{filter:drop-shadow(0 0 8px rgba(34,211,238,.75))}
+
+/* ---------- sheets ---------- */
+#layers{position:fixed;inset:0;pointer-events:none;z-index:100}
+.sheet-layer{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;transition:opacity .16s ease;pointer-events:auto;backdrop-filter:blur(2px)}
+.sheet-layer.in{opacity:1}
+.sheet{width:100%;max-height:92dvh;background:#080808;border-radius:18px 18px 0 0;border-top:1px solid #272727;
+  display:flex;flex-direction:column;overflow:hidden;transform:translateY(18px);transition:transform .18s ease}
+.sheet-layer.in .sheet{transform:none}
+.sheet.full{height:92dvh}
+.sheet-head{display:flex;align-items:center;gap:6px;padding:9px 10px;border-bottom:1px solid #1b1b1b;flex:none;min-height:50px}
+.sheet-title{flex:1;text-align:center;font-size:14.5px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet-body{padding:12px 16px calc(24px + env(safe-area-inset-bottom));overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1}
+.btn-ghost{padding:8px 10px;font-size:14px;color:var(--dim);font-weight:600}
+.btn-text{padding:8px 10px;font-size:14px;color:var(--cyan);font-weight:700}
+.btn{padding:10px 16px;border-radius:11px;background:#1a1a1a;border:1px solid #2a2a2a;font-size:14px;font-weight:650;color:#e6e6e6}
+.btn.small{padding:7px 12px;font-size:13px;border-radius:9px}
+.btn.primary{background:linear-gradient(135deg,var(--cyan),var(--blue));color:#00141a;border-color:transparent;
+  box-shadow:0 0 18px rgba(34,211,238,.28)}
+.btn.danger{color:var(--rose);border-color:rgba(251,113,133,.35)}
+.btn:active{transform:scale(.985)}
+
+/* forms */
+.field{margin-bottom:13px}
+.flabel{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--dim);margin-bottom:5px;text-transform:uppercase}
+input,select,textarea{width:100%;background:#131313;border:1px solid #262626;border-radius:11px;color:var(--text);
+  padding:11px 13px;font:inherit;font-size:15px;outline:none;-webkit-appearance:none;appearance:none}
+select{background-image:none}
+textarea{resize:vertical;min-height:72px;line-height:1.45}
+input:focus,select:focus,textarea:focus{border-color:rgba(34,211,238,.6);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
+input[type=checkbox]{width:auto;padding:0}
+.field-check{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:#131313;border:1px solid #262626;border-radius:11px;padding:12px 14px}
+.field-check .flabel{margin:0;font-size:13px;text-transform:none;letter-spacing:0;color:#dcdcdc;font-weight:550}
+.field-check input{width:20px;height:20px;accent-color:#22d3ee}
+
+/* detail */
+.drow{padding:10px 0;border-bottom:1px solid #161616;display:flex;gap:12px;align-items:flex-start}
+.drow:last-child{border-bottom:none}
+.dlabel{width:112px;flex:none;font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--dim2);padding-top:2px}
+.dval{flex:1;min-width:0;font-size:14px;color:#e2e2e2;white-space:pre-wrap;word-break:break-word}
+.dval.mono{font-size:12.5px}
+.subsec{margin-top:18px;border-top:1px solid #1c1c1c;padding-top:12px}
+.subhead{font-size:11.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.docrow{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #141414}
+.docrow span{flex:1;font-size:13.5px;color:#ddd}
+.docrow span.have{color:var(--dim2);text-decoration:line-through}
+.mini{padding:5px 10px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;font-size:12px;font-weight:650}
+.mini.danger{color:var(--rose)}
+.addrow{display:flex;gap:8px;margin-top:10px}
+.addrow input{flex:1}
+.logbox{margin-top:16px;border-top:1px solid #1c1c1c;padding-top:12px}
+.logbox label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin:10px 0 6px}
+.logrow{display:flex;gap:8px}
+.logrow input{flex:1}
+.sheet-actions{display:flex;gap:9px;margin-top:18px}
+.sheet-actions .btn{flex:1}
+
+/* search */
+.searchbar{display:flex;align-items:center;gap:9px;background:#141414;border:1px solid #262626;border-radius:12px;padding:9px 12px}
+.searchbar svg{width:17px;height:17px;fill:none;stroke:var(--dim);stroke-width:1.9;stroke-linecap:round}
+.searchbar input{background:none;border:none;padding:0;font-size:15px}
+.rescount{font-size:11.5px;color:var(--dim2);padding:12px 2px 6px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+
+/* menu sheet */
+.menu-item{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border-top:1px solid var(--line);font-size:14.5px;font-weight:550;text-align:start}
+.menu-item:first-child{border-top:none}
+.menu-item svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.menu-item.danger{color:var(--rose)}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 18px);transform:translate(-50%,12px);
+  background:#1c1c1c;border:1px solid #2e2e2e;color:#eee;font-size:13px;font-weight:600;padding:10px 16px;border-radius:12px;
+  opacity:0;pointer-events:none;transition:.2s;z-index:300;max-width:88vw;text-align:center}
+.toast.in{opacity:1;transform:translate(-50%,0)}
+
+/* empty full page */
+.blank{padding:48px 24px;text-align:center;color:var(--dim2)}
+.blank .ico{margin:0 auto 14px;width:46px;height:46px;border-radius:14px}
+.blank .ico svg{width:22px;height:22px}
+.blank p{font-size:13.5px;margin:0 0 16px;color:var(--dim);line-height:1.5}
+
+/* desktop */
+@media(min-width:860px){
+  .rail{display:flex}
+  .bottomnav{display:none}
+  .content{padding-bottom:40px;max-width:900px;margin-inline:auto;width:100%}
+  .topbar{padding-inline:14px}
+  .sheet-layer{align-items:center;padding:20px}
+  .sheet{max-width:620px;border-radius:16px;border:1px solid #272727;max-height:86vh}
+  .sheet.full{height:86vh}
+  .row:hover{background:#0d0d0d}
+  .dayrow:hover{background:#0d0d0d}
+}
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+.aiw{display:flex;flex-direction:column;gap:14px}
+.aiw textarea,.aiw input[type=text],.aiw input[type=password],.aiw select{width:100%;background:#0e0e0e;color:var(--text);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;font:inherit;min-height:44px}
+.aiw textarea{min-height:130px;resize:vertical;line-height:1.7}
+.aiw .r{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.aiw .r>*{flex:1 1 130px}
+.aiw .b{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:#141414;position:relative;cursor:pointer;text-align:center}
+.aiw .b.p{background:linear-gradient(135deg,rgba(34,211,238,.22),rgba(167,139,250,.22));border-color:rgba(34,211,238,.45)}
+.aiw .b.d{color:var(--rose)}
+.aiw .b:disabled{opacity:.45}
+.aiw [hidden]{display:none!important}
+.aiw .sr{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.aiw .b:focus-within,.aiw .b:focus-visible,.aiw summary:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.aiw details{border:1px solid var(--line2);border-radius:14px;padding:10px 12px}
+.aiw summary{min-height:32px;cursor:pointer;font-weight:600}
+.aiw .st{min-height:22px;font-size:13px;color:var(--dim);line-height:1.5}
+.aiw .st.err{color:var(--rose)} .aiw .st.ok{color:var(--green)}
+.aiw .st.rec{color:var(--rose);font-weight:700}
+.aiw .st.rec i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--rose);margin-inline-end:8px;animation:aipulse 1s infinite}
+@keyframes aipulse{50%{opacity:.25}}
+.aiw .gl{display:flex;gap:8px;align-items:center;border-top:1px solid var(--line);padding:8px 0}
+.aiw .gl span{flex:1;min-width:0;word-break:break-word}
+.aiw .gl .b{min-width:64px;padding:0 10px}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <div class="topwrap" id="topwrap"></div>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+<nav class="bottomnav" id="bottomnav"></nav>
+<div id="layers"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   ICONS
+   ========================================================= */
+const ICON = {
+  home:'<path d="M3 10.7 12 3.5l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2.6"/><path d="M8 3v4M16 3v4M3 10.2h18"/>',
+  task:'<path d="M8.6 11.6 11 14l4.6-4.6"/><rect x="3" y="4" width="18" height="17" rx="3.2"/>',
+  research:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9.5 12.5h6M9.5 16h4"/>',
+  apps:'<rect x="3" y="7" width="18" height="13" rx="2.6"/><path d="M9 7V5.2A2.2 2.2 0 0 1 11.2 3h1.6A2.2 2.2 0 0 1 15 5.2V7"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/>',
+  bell:'<path d="M18 15.4V10a6 6 0 1 0-12 0v5.4L4 18.4h16z"/><path d="M10 21.2h4"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.2 8-6.2s8 2.2 8 6.2"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  more:'<circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.2 2"/>',
+  book:'<path d="M4 5.2A2.2 2.2 0 0 1 6.2 3H19v18H6.2A2.2 2.2 0 0 0 4 23.2z" transform="translate(0,-1.2)"/><path d="M4 18a2.2 2.2 0 0 1 2.2-2.2H19"/>',
+  link:'<path d="M10.2 13.4a4.6 4.6 0 0 0 6.5 0l2-2a4.6 4.6 0 0 0-6.5-6.5l-1 1"/><path d="M13.8 10.6a4.6 4.6 0 0 0-6.5 0l-2 2a4.6 4.6 0 0 0 6.5 6.5l1-1"/>',
+  flag:'<path d="M5.5 21V4h8.4l1 3H19v9h-5.6l-1-3H5.5"/>',
+  doc:'<path d="M7 3h7.5L19 7.5V21H7z"/><path d="M14.5 3v4.5H19"/><path d="M10 13h6M10 16.5h4"/>',
+  check:'<path d="M4.5 12.5 9.5 17.5 19.5 6.5"/>',
+  trash:'<path d="M4 7h16M9.5 7V4.2h5V7M6.4 7l1 14h9.2l1-14"/>',
+  edit:'<path d="M4 20h4.2L20 8.2 15.8 4 4 15.8z"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  spark:'<path d="M12 3.2 13.9 9 19.7 11 13.9 13 12 18.8 10.1 13 4.3 11 10.1 9z"/>',
+  target:'<circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="3.2"/>',
+  download:'<path d="M12 4v11"/><path d="M7.5 11 12 15.5 16.5 11"/><path d="M4.5 19.5h15"/>',
+  upload:'<path d="M12 19V8"/><path d="M7.5 12 12 7.5 16.5 12"/><path d="M4.5 4.5h15"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  fwd:'<path d="M9 5l7 7-7 7"/>',
+  gear:'<circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.4 1z"/>',
+  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>'
+};
+const svgIcon = n => '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICON[n] || '') + '</svg>';
+
+/* =========================================================
+   I18N
+   ========================================================= */
+const I18N = {
+  en:{},
+  fa:{
+    'Today':'امروز','This Week':'این هفته','Research':'پژوهش','Applications':'درخواست‌ها',
+    'Home':'خانه','Calendar':'تقویم','Tasks':'کارها','Apps':'درخواست‌ها','Settings':'تنظیمات',
+    'Search':'جستجو','AI':'هوش مصنوعی','Notifications':'اعلان‌ها','Profile and settings':'پروفایل و تنظیمات',
+    'Next study session':'جلسه مطالعه بعدی','No session scheduled':'جلسه‌ای برنامه‌ریزی نشده',
+    'Course priorities':'اولویت دروس','No courses yet':'درسی ثبت نشده',
+    'Incomplete tasks':'کارهای ناتمام','No open tasks':'کار باز وجود ندارد',
+    'Exams & assignments':'امتحان‌ها و تمرین‌ها','Nothing scheduled':'چیزی برنامه‌ریزی نشده',
+    'English practice':'تمرین انگلیسی','No practice scheduled':'تمرینی برنامه‌ریزی نشده',
+    'Reading queue':'صف مطالعه مقالات','No papers saved':'مقاله‌ای ذخیره نشده',
+    'Application deadlines':'مهلت درخواست‌ها','No deadlines tracked':'مهلتی ثبت نشده',
+    'Recommended next action':'اقدام بعدی پیشنهادی','Nothing pending':'چیزی در انتظار نیست',
+    'Add a task to get a recommendation':'برای دریافت پیشنهاد یک کار اضافه کنید',
+    'Show all':'نمایش همه','Tap to add':'برای افزودن بزنید',
+    'Cancel':'لغو','Save':'ذخیره','New':'جدید','Edit':'ویرایش','Delete':'حذف','Close':'بستن',
+    'Add':'افزودن','Document name':'نام مدرک','Documents':'مدارک','No documents listed':'مدرکی ثبت نشده',
+    'Mark':'علامت‌زدن','Mark complete':'تکمیل شد','Mark as open':'بازگردانی به حالت باز',
+    'Toggle complete':'تغییر وضعیت','Log':'ثبت','Log study time (minutes)':'ثبت زمان مطالعه (دقیقه)',
+    'Learning outcome':'نتیجه یادگیری','Overdue':'گذشته','Open':'باز','All':'همه','Done':'انجام‌شده',
+    'Courses & grades':'دروس و نمرات','Add course':'افزودن درس','New task':'کار جدید',
+    'Title':'عنوان','Type':'نوع','Course':'درس','Due date':'تاریخ سررسید','Priority':'اولویت',
+    'Estimate (minutes)':'برآورد (دقیقه)','Notes':'یادداشت','Start':'شروع','Planned minutes':'دقیقه برنامه‌ریزی‌شده',
+    'Logged minutes':'دقیقه ثبت‌شده','Completed':'تکمیل‌شده','Course name':'نام درس','Code':'کد',
+    'Credits':'واحد','Grade':'نمره','Authors':'نویسندگان','Venue / journal':'محل نشر','Year':'سال',
+    'Source link':'پیوند منبع','Source verified':'منبع تأییدشده','Reading status':'وضعیت مطالعه',
+    'Linked paper':'مقاله مرتبط','Note':'یادداشت','Name':'نام','Affiliation':'وابستگی سازمانی',
+    'Research area':'حوزه پژوهشی','Official profile link':'پیوند پروفایل رسمی','Target date':'تاریخ هدف',
+    'Institution':'مؤسسه','Program':'برنامه','Scope':'دامنه','Status':'وضعیت',
+    'Deadline':'مهلت','Deadline verified on official source':'مهلت در منبع رسمی تأیید شده',
+    'Official source link':'پیوند منبع رسمی','Funding status':'وضعیت تأمین هزینه','Next step':'قدم بعدی',
+    'Verified':'تأییدشده','Manually entered':'ورودی دستی','Queued':'در صف','Reading':'در حال مطالعه',
+    'Read':'خوانده‌شده','Domestic':'داخلی','International':'بین‌المللی','Preparing':'در حال آماده‌سازی',
+    'Submitted':'ارسال‌شده','Interview':'مصاحبه','Offer':'پذیرش','Rejected':'رد شده',
+    'Low':'کم','Normal':'معمولی','High':'زیاد','Task':'کار','Exam':'امتحان','Assignment':'تمرین',
+    'English practice task':'تمرین انگلیسی','Reading task':'مطالعه','Thesis milestone':'نقطه عطف پایان‌نامه',
+    'Session':'جلسه','Paper':'مقاله','Profile':'پروفایل','Milestone':'نقطه عطف','Application':'درخواست',
+    'Save session':'ذخیره جلسه','Yes':'بله','No':'خیر','none':'—','Required field missing':'فیلد الزامی خالی است',
+    'Tomorrow':'فردا','Yesterday':'دیروز','overdue':'گذشته','left':'باقی‌مانده',
+    'Planned vs actual study':'مطالعه برنامه‌ریزی‌شده در برابر واقعی','Planned':'برنامه‌ریزی‌شده','Actual':'واقعی',
+    'Course workload':'بار کاری دروس','Weekly review':'بازبینی هفتگی','Reset checklist':'بازنشانی چک‌لیست',
+    'Week at a glance':'نمای کلی هفته','Saved papers':'مقالات ذخیره‌شده','Research notes':'یادداشت‌های پژوهشی',
+    'Professor profiles':'پروفایل استادان','Thesis & experiments':'پایان‌نامه و آزمایش‌ها',
+    'Verified source links':'پیوندهای منبع تأییدشده','Reading status summary':'خلاصه وضعیت مطالعه',
+    'Sharif / domestic preparation':'آماده‌سازی دانشگاه شریف / داخلی',
+    'International PhD opportunities':'فرصت‌های دکتری بین‌المللی','Eligibility requirements':'شرایط احراز',
+    'Funding status':'وضعیت تأمین هزینه','Verified deadlines':'مهلت‌های تأییدشده',
+    'Missing documents & next steps':'مدارک ناقص و قدم‌های بعدی','No applications yet':'درخواستی ثبت نشده',
+    'Data':'داده‌ها','Export data':'برون‌بری داده‌ها','Restore data':'بازیابی داده‌ها',
+    'Reset all data':'پاک‌کردن همه داده‌ها','Language':'زبان','Your name':'نام شما',
+    'Display name':'نام نمایشی','Search everything':'جستجو در همه‌چیز','No results':'نتیجه‌ای نیست',
+    'Nothing scheduled for this day':'برای این روز چیزی برنامه‌ریزی نشده','Prev':'قبلی','Next':'بعدی',
+    'Add session':'افزودن جلسه','Add task':'افزودن کار','Add paper':'افزودن مقاله','Add note':'افزودن یادداشت',
+    'Add profile':'افزودن پروفایل','Add milestone':'افزودن نقطه عطف','Add application':'افزودن درخواست',
+    'All clear':'همه‌چیز مرتب است','Overdue tasks':'کارهای عقب‌افتاده','Due today':'سررسید امروز',
+    'Upcoming deadlines':'مهلت‌های نزدیک','No notifications':'اعلانی نیست'
+  }
+};
+let LANG = 'en';
+const T = k => (I18N[LANG] && I18N[LANG][k]) || (I18N.en[k]) || k;
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+const uid = ()=> Math.random().toString(36).slice(2,10);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const isoOf = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const todayISO = ()=> isoOf(new Date());
+function parseISO(s){ const p=String(s).split('-').map(Number); return new Date(p[0],(p[1]||1)-1,p[2]||1); }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function daysBetween(a,b){ return Math.round((parseISO(b)-parseISO(a))/86400000); }
+function nowLocal(){ const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }
+
+const LOC = ()=> LANG==='fa' ? 'fa-IR' : 'en-US';
+function fmtDate(iso){
+  if(!iso) return '';
+  try{ return new Intl.DateTimeFormat(LOC(),{month:'short',day:'numeric'}).format(parseISO(iso)); }
+  catch(e){ return iso; }
+}
+function relLabel(iso){
+  if(!iso) return '';
+  const d = daysBetween(todayISO(), iso);
+  if(d===0) return T('Today');
+  if(d===1) return T('Tomorrow');
+  if(d===-1) return T('Yesterday');
+  if(d<0) return Math.abs(d) + T('overdue');
+  return d + T('left');
+}
+function weekdayShort(date){
+  try{ return new Intl.DateTimeFormat(LOC(),{weekday:'short'}).format(date); }
+  catch(e){ return ''; }
+}
+function toast(msg){
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('in');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('in'), 2000);
+}
+
+/* =========================================================
+   DATA
+   ========================================================= */
+const STORE_KEY = 'ali.missioncontrol.v1';
+let db;
+
+function defaultDB(){
+  return {
+    version:1,
+    settings:{ name:'', lang:'en', rail:false },
+    courses:[], tasks:[], sessions:[], papers:[], notes:[], people:[], milestones:[], apps:[],
+    review:[
+      {id:uid(), text:'Review completed tasks and study sessions', done:false},
+      {id:uid(), text:'Update course priorities for next week', done:false},
+      {id:uid(), text:'Check application deadlines and missing documents', done:false},
+      {id:uid(), text:'Schedule next week study sessions', done:false}
+    ]
+  };
+}
+function loadDB(){
+  let raw=null;
+  try{ raw = localStorage.getItem(STORE_KEY); }catch(e){}
+  if(raw){
+    try{ db = JSON.parse(raw); }catch(e){ db = defaultDB(); }
+  } else db = defaultDB();
+  const d = defaultDB();
+  Object.keys(d).forEach(k=>{ if(db[k]===undefined) db[k]=d[k]; });
+  if(!db.settings) db.settings = d.settings;
+  if(!Array.isArray(db.review)) db.review = d.review;
+  LANG = db.settings.lang || 'en';
+}
+function saveDB(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(db)); }
+  catch(e){ toast('Storage unavailable'); }
+}
+
+/* =========================================================
+   SCHEMAS
+   ========================================================= */
+const SCHEMAS = {
+  task:{ store:'tasks', singular:'Task', defaults:{done:false, kind:'task', priority:'normal'},
+    fields:[
+      {k:'title',l:'Title',t:'text',req:1},
+      {k:'kind',l:'Type',t:'select',o:[['task','Task'],['exam','Exam'],['assignment','Assignment'],['english','English practice task'],['reading','Reading task'],['thesis','Thesis milestone']]},
+      {k:'courseId',l:'Course',t:'course'},
+      {k:'due',l:'Due date',t:'date'},
+      {k:'priority',l:'Priority',t:'select',o:[['low','Low'],['normal','Normal'],['high','High']]},
+      {k:'est',l:'Estimate (minutes)',t:'number'},
+      {k:'note',l:'Notes',t:'textarea'}
+    ]},
+  session:{ store:'sessions', singular:'Session', defaults:{done:false, logged:0},
+    fields:[
+      {k:'title',l:'Title',t:'text',req:1},
+      {k:'courseId',l:'Course',t:'course'},
+      {k:'start',l:'Start',t:'datetime-local',req:1},
+      {k:'min',l:'Planned minutes',t:'number'},
+      {k:'logged',l:'Logged minutes',t:'number'},
+      {k:'outcome',l:'Learning outcome',t:'textarea'},
+      {k:'done',l:'Completed',t:'check'}
+    ]},
+  course:{ store:'courses', singular:'Course', defaults:{},
+    fields:[
+      {k:'name',l:'Course name',t:'text',req:1},
+      {k:'code',l:'Code',t:'text'},
+      {k:'credits',l:'Credits',t:'number'},
+      {k:'grade',l:'Grade',t:'text'},
+      {k:'note',l:'Notes',t:'textarea'}
+    ]},
+  paper:{ store:'papers', singular:'Paper', defaults:{status:'queue', verified:false},
+    fields:[
+      {k:'title',l:'Title',t:'text',req:1},
+      {k:'authors',l:'Authors',t:'text'},
+      {k:'venue',l:'Venue / journal',t:'text'},
+      {k:'year',l:'Year',t:'number'},
+      {k:'url',l:'Source link',t:'url'},
+      {k:'verified',l:'Source verified',t:'check'},
+      {k:'status',l:'Reading status',t:'select',o:[['queue','Queued'],['reading','Reading'],['done','Read']]},
+      {k:'note',l:'Notes',t:'textarea'}
+    ]},
+  note:{ store:'notes', singular:'Note', defaults:{},
+    fields:[
+      {k:'title',l:'Title',t:'text',req:1},
+      {k:'body',l:'Note',t:'textarea'},
+      {k:'paperId',l:'Linked paper',t:'paper'}
+    ]},
+  person:{ store:'people', singular:'Profile', defaults:{},
+    fields:[
+      {k:'name',l:'Name',t:'text',req:1},
+      {k:'affiliation',l:'Affiliation',t:'text'},
+      {k:'area',l:'Research area',t:'text'},
+      {k:'url',l:'Official profile link',t:'url'},
+      {k:'note',l:'Notes',t:'textarea'}
+    ]},
+  milestone:{ store:'milestones', singular:'Milestone', defaults:{done:false},
+    fields:[
+      {k:'title',l:'Title',t:'text',req:1},
+      {k:'due',l:'Target date',t:'date'},
+      {k:'note',l:'Notes',t:'textarea'},
+      {k:'done',l:'Completed',t:'check'}
+    ]},
+  app:{ store:'apps', singular:'Application', defaults:{scope:'international', status:'preparing', deadlineVerified:false, docs:[], reqs:[]},
+    fields:[
+      {k:'institution',l:'Institution',t:'text',req:1},
+      {k:'program',l:'Program',t:'text'},
+      {k:'scope',l:'Scope',t:'select',o:[['domestic','Domestic'],['international','International']]},
+      {k:'status',l:'Status',t:'select',o:[['preparing','Preparing'],['submitted','Submitted'],['interview','Interview'],['offer','Offer'],['rejected','Rejected']]},
+      {k:'deadline',l:'Deadline',t:'date'},
+      {k:'deadlineVerified',l:'Deadline verified on official source',t:'check'},
+      {k:'sourceUrl',l:'Official source link',t:'url'},
+      {k:'funding',l:'Funding status',t:'text'},
+      {k:'nextStep',l:'Next step',t:'text'},
+      {k:'note',l:'Notes',t:'textarea'}
+    ]}
+};
+
+const KIND_META = {
+  task:{icon:'task', color:'var(--cyan)',  label:'Task'},
+  exam:{icon:'flag', color:'var(--rose)',  label:'Exam'},
+  assignment:{icon:'doc', color:'var(--amber)', label:'Assignment'},
+  english:{icon:'spark', color:'var(--violet)', label:'English practice'},
+  reading:{icon:'book', color:'var(--teal)', label:'Reading task'},
+  thesis:{icon:'research', color:'var(--blue)', label:'Thesis milestone'}
+};
+
+/* =========================================================
+   STATE
+   ========================================================= */
+const state = {
+  screen:'workspace',   // workspace | calendar | tasks
+  tab:'today',          // today | week | research | apps
+  taskSub:'tasks',
+  taskFilter:'open',
+  weekOffset:0,
+  calOffset:0
+};
+
+/* =========================================================
+   SMALL HELPERS
+   ========================================================= */
+const courseName = id => { const c = db.courses.find(x=>x.id===id); return c ? c.name : ''; };
+const sessionStartDate = s => s && s.start ? String(s.start).slice(0,10) : '';
+
+function taskSort(a,b){
+  const ad = a.due || '9999-12-31', bd = b.due || '9999-12-31';
+  if(ad !== bd) return ad.localeCompare(bd);
+  const pr = {high:0, normal:1, low:2};
+  return (pr[a.priority]||1) - (pr[b.priority]||1);
+}
+function weekStartDate(offset){
+  const d = new Date();
+  const dow = (d.getDay() + 6) % 7; // Monday = 0
+  const s = addDays(d, -dow + offset*7);
+  s.setHours(0,0,0,0);
+  return s;
+}
+function dayItems(iso){
+  const items = [];
+  db.sessions.forEach(s=>{ if(sessionStartDate(s)===iso) items.push({type:'session', ref:s, title:s.title}); });
+  db.tasks.forEach(t=>{ if(t.due===iso && !t.done) items.push({type:'task', ref:t, title:t.title}); });
+  db.apps.forEach(a=>{ if(a.deadline===iso) items.push({type:'app', ref:a, title:a.institution}); });
+  db.milestones.forEach(m=>{ if(m.due===iso) items.push({type:'milestone', ref:m, title:m.title}); });
+  return items;
+}
+
+/* =========================================================
+   RECOMMENDATION ENGINE  (derived from real stored data only)
+   ========================================================= */
+function recommend(){
+  const open = db.tasks.filter(t=>!t.done);
+  if(!open.length) return null;
+  const today = todayISO();
+  const score = t => {
+    let s = 0;
+    if(t.due){
+      const d = daysBetween(today, t.due);
+      if(d < 0) s += 100 + Math.min(60, -d*5);
+      else if(d === 0) s += 80;
+      else if(d <= 3) s += 55 - d*8;
+      else if(d <= 7) s += 16;
+      else s += 5;
+    }
+    if(t.priority === 'high') s += 25;
+    else if(t.priority === 'normal') s += 8;
+    if(t.kind === 'exam') s += 22;
+    else if(t.kind === 'assignment') s += 12;
+    if(t.kind === 'english') s += 4;
+    return s;
+  };
+  const best = open.slice().sort((a,b)=>score(b)-score(a))[0];
+  const reasons = [];
+  if(best.due){
+    const d = daysBetween(today, best.due);
+    if(d < 0) reasons.push(T('overdue') + ' ' + Math.abs(d) + 'd');
+    else if(d === 0) reasons.push(T('Due today'));
+    else reasons.push(d + T('left'));
+  }
+  if(best.priority === 'high') reasons.push(T('High') + ' ' + T('Priority').toLowerCase());
+  if(best.kind && best.kind !== 'task') reasons.push(T(KIND_META[best.kind].label));
+  return { task: best, reasons };
+}
+
+/* =========================================================
+   ROW BUILDERS
+   ========================================================= */
+function row(o){
+  return '<div class="row" data-act="'+(o.act||'open')+'"'
+    + (o.entity ? ' data-entity="'+o.entity+'"' : '')
+    + (o.id ? ' data-id="'+o.id+'"' : '')
+    + '>'
+    + '<div class="ico" style="--c:'+(o.color||'var(--cyan)')+'">'+svgIcon(o.icon||'task')+'</div>'
+    + '<div class="row-main">'
+    +   '<div class="row-title '+(o.titleCls||'')+'">'+(o.title||'')+'</div>'
+    +   (o.desc ? '<div class="row-desc">'+o.desc+'</div>' : '')
+    + '</div>'
+    + '<div class="row-side">'
+    +   (o.meta ? '<div class="row-meta '+(o.metaCls||'')+'">'+o.meta+'</div>' : '')
+    +   (o.extra || '')
+    + '</div>'
+    + '</div>';
+}
+function emptyRow(text, entity){
+  return '<div class="row empty" data-act="new" data-entity="'+entity+'">'
+    + '<div class="ico" style="--c:#3d3d3d">'+svgIcon('plus')+'</div>'
+    + '<div class="row-main"><div class="row-title dim">'+esc(text)+'</div>'
+    + '<div class="row-desc">'+esc(T('Tap to add'))+'</div></div></div>';
+}
+function moreBtn(entity,id){
+  return '<button class="morebtn" data-act="menu" data-entity="'+entity+'" data-id="'+id+'">'+svgIcon('more')+'</button>';
+}
+function section(title, inner, action){
+  return '<section class="sec"><div class="sec-head"><h2>'+esc(title)+'</h2>'+(action||'')+'</div>'
+    + '<div class="rows">'+inner+'</div></section>';
+}
+
+/* ---------- entity rows ---------- */
+function taskRow(t){
+  const km = KIND_META[t.kind] || KIND_META.task;
+  const overdue = t.due && t.due < todayISO() && !t.done;
+  return row({
+    icon: km.icon, color: km.color,
+    title: esc(t.title),
+    desc: esc([courseName(t.courseId), t.note].filter(Boolean).join(' · ')),
+    meta: t.due ? esc(relLabel(t.due)) : (t.est ? t.est + 'm' : ''),
+    metaCls: overdue ? 'warn' : '',
+    act:'open', entity:'task', id:t.id,
+    extra: moreBtn('task', t.id)
+  });
+}
+function taskRowFull(t){
+  const km = KIND_META[t.kind] || KIND_META.task;
+  const overdue = t.due && t.due < todayISO() && !t.done;
+  return '<div class="row" data-act="open" data-entity="task" data-id="'+t.id+'">'
+    + '<button class="checkbox '+(t.done?'on':'')+'" data-act="toggleTask" data-id="'+t.id+'" aria-label="'+esc(T('Toggle complete'))+'">'+(t.done?svgIcon('check'):'')+'</button>'
+    + '<div class="row-main">'
+    +   '<div class="row-title '+(t.done?'done':'')+'">'+esc(t.title)+'</div>'
+    +   '<div class="row-desc">'+esc([T(km.label), courseName(t.courseId), t.due?fmtDate(t.due):''].filter(Boolean).join(' · '))+'</div>'
+    + '</div>'
+    + '<div class="row-side">'
+    +   '<div class="row-meta '+(overdue?'warn':'')+'">'+(t.due?esc(relLabel(t.due)):'')+'</div>'
+    +   moreBtn('task', t.id)
+    + '</div></div>';
+}
+function sessRow(s){
+  const dt = s.start ? String(s.start).replace('T',' ') : '';
+  return row({
+    icon:'clock', color:'var(--blue)',
+    title: esc(s.title),
+    desc: esc([courseName(s.courseId), dt].filter(Boolean).join(' · ')),
+    meta: s.min ? s.min+'m' : '',
+    act:'open', entity:'session', id:s.id,
+    extra: moreBtn('session', s.id)
+  });
+}
+function courseRowFull(c){
+  const open = db.tasks.filter(t=>!t.done && t.courseId===c.id).length;
+  return row({
+    icon:'book', color:'var(--teal)',
+    title: esc(c.name),
+    desc: esc([c.code, c.credits? c.credits+' '+T('Credits'):'', c.grade? T('Grade')+': '+c.grade:''].filter(Boolean).join(' · ')),
+    meta: open ? open+' · '+T('Open') : '',
+    act:'open', entity:'course', id:c.id,
+    extra: moreBtn('course', c.id)
+  });
+}
+function paperRow(p){
+  const map = {queue:'var(--violet)', reading:'var(--amber)', done:'var(--teal)'};
+  const st = {queue:T('Queued'), reading:T('Reading'), done:T('Read')}[p.status] || T('Queued');
+  return row({
+    icon:'research', color: map[p.status] || 'var(--violet)',
+    title: esc(p.title),
+    desc: esc([p.authors, p.venue, p.year].filter(Boolean).join(' · ')),
+    meta: esc(st),
+    act:'open', entity:'paper', id:p.id,
+    extra: moreBtn('paper', p.id)
+  });
+}
+function noteRow(n){
+  const p = db.papers.find(x=>x.id===n.paperId);
+  return row({
+    icon:'doc', color:'var(--amber)',
+    title: esc(n.title),
+    desc: esc([p?p.title:'', n.body].filter(Boolean).join(' · ')),
+    meta:'',
+    act:'open', entity:'note', id:n.id,
+    extra: moreBtn('note', n.id)
+  });
+}
+function personRow(p){
+  return row({
+    icon:'user', color:'var(--blue)',
+    title: esc(p.name),
+    desc: esc([p.affiliation, p.area].filter(Boolean).join(' · ')),
+    meta: esc(T('Manually entered')),
+    act:'open', entity:'person', id:p.id,
+    extra: moreBtn('person', p.id)
+  });
+}
+function milestoneRow(m){
+  return row({
+    icon:'flag', color: m.done ? 'var(--teal)' : 'var(--rose)',
+    title: esc(m.title),
+    desc: esc(m.note||''),
+    meta: m.due ? esc(relLabel(m.due)) : '',
+    metaCls: (m.due && m.due < todayISO() && !m.done) ? 'warn' : '',
+    act:'open', entity:'milestone', id:m.id,
+    extra: moreBtn('milestone', m.id)
+  });
+}
+function appRow(a){
+  const st = {preparing:T('Preparing'), submitted:T('Submitted'), interview:T('Interview'), offer:T('Offer'), rejected:T('Rejected')}[a.status] || T('Preparing');
+  return row({
+    icon:'apps', color: a.scope==='domestic' ? 'var(--teal)' : 'var(--violet)',
+    title: esc(a.institution),
+    desc: esc([a.program, st].filter(Boolean).join(' · ')),
+    meta: a.deadline ? esc(fmtDate(a.deadline)) : '',
+    metaCls: (a.deadline && a.deadline < todayISO()) ? 'warn' : '',
+    act:'open', entity:'app', id:a.id,
+    extra: moreBtn('app', a.id)
+  });
+}
+
+/* =========================================================
+   TOP BAR / TABS / NAV / RAIL
+   ========================================================= */
+function currentTitle(){
+  if(state.screen === 'calendar') return T('Calendar');
+  if(state.screen === 'tasks') return T('Tasks');
+  return T(state.tab === 'today' ? 'Today' : state.tab === 'week' ? 'This Week' : state.tab === 'research' ? 'Research' : 'Applications');
+}
+function renderTop(){
+  const n = notifications().length;
+  const name = (db.settings.name||'A').trim().charAt(0).toUpperCase() || 'A';
+  $('#topwrap').innerHTML =
+    '<div class="topbar">'
+      + '<div class="brand"><span class="logo">ALI</span><span class="wstitle">'+esc(currentTitle())+'</span></div>'
+      + '<div class="topactions">'
+        + '<button class="iconbtn" data-act="search" aria-label="'+esc(T('Search'))+'">'+svgIcon('search')+'</button>'
+        + '<button class="iconbtn" data-act="notifications" aria-label="'+esc(T('Notifications'))+'">'+svgIcon('bell')+(n?'<i class="dot"></i>':'')+'</button>'
+        + '<button class="iconbtn avatar" data-act="settings" aria-label="'+esc(T('Profile and settings'))+'">'+esc(name)+'</button>'
+      + '</div>'
+    + '</div>'
+    + (state.screen === 'workspace' ? renderTabs() : '');
+}
+function renderTabs(){
+  const tabs = [['today','Today'],['week','This Week'],['research','Research'],['apps','Applications']];
+  return '<div class="tabs" role="tablist">'
+    + tabs.map(([k,l])=>'<button role="tab" aria-selected="'+(state.tab===k)+'" class="tab '+(state.tab===k?'on':'')+'" data-act="tab" data-tab="'+k+'">'+esc(T(l))+'</button>').join('')
+    + '</div>';
+}
+function activeNav(){
+  if(state.screen === 'calendar') return 'calendar';
+  if(state.screen === 'tasks') return 'tasks';
+  if(state.tab === 'research') return 'research';
+  if(state.tab === 'apps') return 'apps';
+  return 'home';
+}
+function renderBottomNav(){
+  const items = [['home','Home','home'],['calendar','Calendar','cal'],['tasks','Tasks','task'],['research','Research','research'],['apps','Apps','apps'],['ai','AI','spark']];
+  const a = activeNav();
+  $('#bottomnav').innerHTML = items.map(([k,l,ic])=>
+    '<button class="navitem '+(a===k?'on':'')+'" data-act="nav" data-nav="'+k+'">'+svgIcon(ic)+'<span>'+esc(T(l))+'</span></button>'
+  ).join('');
+}
+function renderRail(){
+  const items = [['home','Home','home'],['calendar','Calendar','cal'],['tasks','Tasks','task'],['research','Research','research'],['apps','Apps','apps'],['ai','AI','spark']];
+  const a = activeNav();
+  const collapsed = !!db.settings.rail;
+  const el = $('#rail');
+  el.className = 'rail' + (collapsed ? ' collapsed' : '');
+  el.innerHTML =
+    '<div class="rail-top">'
+      + '<span class="logo">ALI</span>'
+      + '<span class="rail-name">Mission Control</span>'
+    + '</div>'
+    + items.map(([k,l,ic])=>
+        '<button class="railitem '+(a===k?'on':'')+'" data-act="nav" data-nav="'+k+'">'+svgIcon(ic)+'<span>'+esc(T(l))+'</span></button>'
+      ).join('')
+    + '<div class="spacer"></div>'
+    + '<button class="railitem" data-act="settings">'+svgIcon('gear')+'<span>'+esc(T('Settings'))+'</span></button>'
+    + '<button class="railitem" data-act="railToggle">'+svgIcon('menu')+'<span>'+esc(collapsed?'Expand':'Collapse')+'</span></button>';
+}
+
+/* =========================================================
+   NOTIFICATIONS (derived)
+   ========================================================= */
+function notifications(){
+  const today = todayISO();
+  const out = [];
+  db.tasks.filter(t=>!t.done && t.due && t.due < today).forEach(t=>{
+    out.push({kind:'overdue', title:t.title, sub:T('overdue')+' · '+fmtDate(t.due), entity:'task', id:t.id});
+  });
+  db.tasks.filter(t=>!t.done && t.due === today).forEach(t=>{
+    out.push({kind:'today', title:t.title, sub:T('Due today'), entity:'task', id:t.id});
+  });
+  db.apps.filter(a=>a.deadline && a.deadline >= today && daysBetween(today,a.deadline) <= 14).forEach(a=>{
+    out.push({kind:'app', title:a.institution, sub:T('Deadline')+' · '+fmtDate(a.deadline), entity:'app', id:a.id});
+  });
+  db.tasks.filter(t=>!t.done && t.kind==='exam' && t.due && t.due >= today && daysBetween(today,t.due) <= 14).forEach(t=>{
+    out.push({kind:'exam', title:t.title, sub:T('Exam')+' · '+fmtDate(t.due), entity:'task', id:t.id});
+  });
+  return out;
+}
+
+/* =========================================================
+   VIEWS — TODAY
+   ========================================================= */
+function viewToday(){
+  const today = todayISO();
+  let h = '';
+
+  /* 1. Next study session */
+  const now = new Date();
+  const nextSess = db.sessions
+    .filter(s=>s.start && !s.done && new Date(s.start) >= now)
+    .sort((a,b)=>String(a.start).localeCompare(String(b.start)))[0];
+  h += section(T('Next study session'), nextSess ? sessRow(nextSess) : emptyRow(T('No session scheduled'), 'session'));
+
+  /* 2. Course priorities */
+  const priorities = db.courses.map(c=>{
+    const open = db.tasks.filter(t=>!t.done && t.courseId===c.id);
+    const nextDue = open.filter(t=>t.due).sort((a,b)=>a.due.localeCompare(b.due))[0];
+    return {c, open, nextDue};
+  }).filter(x=>x.open.length)
+    .sort((a,b)=>{
+      const da = a.nextDue ? a.nextDue.due : '9999-12-31';
+      const db2 = b.nextDue ? b.nextDue.due : '9999-12-31';
+      return da.localeCompare(db2);
+    });
+  h += section(T('Course priorities'),
+    priorities.length
+      ? priorities.slice(0,4).map(x=>row({
+          icon:'book', color:'var(--teal)',
+          title: esc(x.c.name),
+          desc: esc(x.open.length + ' ' + T('Open').toLowerCase() + (x.nextDue ? ' · ' + fmtDate(x.nextDue.due) : '')),
+          meta: x.nextDue ? esc(relLabel(x.nextDue.due)) : '',
+          metaCls: (x.nextDue && x.nextDue.due < today) ? 'warn' : '',
+          act:'open', entity:'course', id:x.c.id
+        })).join('')
+      : emptyRow(T('No courses yet'), 'course'),
+    priorities.length > 4 ? '<button class="seclink" data-act="nav" data-nav="tasks">'+esc(T('Show all'))+'</button>' : ''
+  );
+
+  /* 3. Incomplete tasks */
+  const open = db.tasks.filter(t=>!t.done).sort(taskSort);
+  h += section(T('Incomplete tasks'),
+    open.length ? open.slice(0,5).map(taskRow).join('') : emptyRow(T('No open tasks'), 'task'),
+    open.length > 5 ? '<button class="seclink" data-act="nav" data-nav="tasks">'+esc(T('Show all'))+'</button>' : ''
+  );
+
+  /* 4. Exams & assignments */
+  const ex = db.tasks.filter(t=>!t.done && (t.kind==='exam' || t.kind==='assignment')).sort(taskSort);
+  h += section(T('Exams & assignments'), ex.length ? ex.slice(0,4).map(taskRow).join('') : emptyRow(T('Nothing scheduled'), 'task'));
+
+  /* 5. English practice */
+  const en = db.tasks.filter(t=>!t.done && t.kind==='english').sort(taskSort);
+  h += section(T('English practice'), en.length ? en.slice(0,3).map(taskRow).join('') : emptyRow(T('No practice scheduled'), 'task'));
+
+  /* 6. Reading queue */
+  const rq = db.papers.filter(p=>p.status !== 'done');
+  h += section(T('Reading queue'), rq.length ? rq.slice(0,4).map(paperRow).join('') : emptyRow(T('No papers saved'), 'paper'));
+
+  /* 7. Application deadlines */
+  const apps = db.apps.filter(a=>a.deadline).sort((a,b)=>a.deadline.localeCompare(b.deadline));
+  h += section(T('Application deadlines'), apps.length ? apps.slice(0,4).map(appRow).join('') : emptyRow(T('No deadlines tracked'), 'app'));
+
+  /* 8. Recommended next action */
+  const rec = recommend();
+  h += section(T('Recommended next action'),
+    rec
+      ? row({
+          icon:'target', color:'var(--cyan)',
+          title: esc(rec.task.title),
+          desc: esc(rec.reasons.join(' · ') || T('Open')),
+          meta: rec.task.due ? esc(fmtDate(rec.task.due)) : '',
+          act:'open', entity:'task', id:rec.task.id
+        })
+      : '<div class="row"><div class="ico" style="--c:#3d3d3d">'+svgIcon('target')+'</div>'
+        + '<div class="row-main"><div class="row-title dim">'+esc(T('Nothing pending'))+'</div>'
+        + '<div class="row-desc">'+esc(T('Add a task to get a recommendation'))+'</div></div></div>'
+  );
+
+  return h;
+}
+
+/* =========================================================
+   VIEWS — THIS WEEK
+   ========================================================= */
+function viewWeek(){
+  const ws = weekStartDate(0);
+  const days = Array.from({length:7}, (_,i)=>addDays(ws,i));
+  const isoDays = days.map(isoOf);
+  let h = '';
+
+  /* Week at a glance */
+  h += section(T('Week at a glance'), days.map((d,i)=>{
+    const iso = isoDays[i];
+    const items = dayItems(iso);
+    const isToday = iso === todayISO();
+    return '<div class="dayrow" data-act="day" data-date="'+iso+'">'
+      + '<div class="daylabel '+(isToday?'today':'')+'"><b>'+esc(weekdayShort(d))+'</b><span>'+d.getDate()+'</span></div>'
+      + '<div class="dayitems">'
+        + (items.length
+            ? items.slice(0,2).map(x=>'<span class="chip">'+esc(x.title)+'</span>').join('')
+              + (items.length > 2 ? '<span class="chip more">+'+(items.length-2)+'</span>' : '')
+            : '<span class="chip empty">'+esc(T('Nothing scheduled'))+'</span>')
+      + '</div></div>';
+  }).join(''));
+
+  /* Planned vs actual */
+  const wkSessions = db.sessions.filter(s=>isoDays.indexOf(sessionStartDate(s)) !== -1);
+  const planned = wkSessions.reduce((a,s)=>a + (Number(s.min)||0), 0);
+  const actual  = wkSessions.reduce((a,s)=>a + (Number(s.logged)||0), 0);
+  const maxv = Math.max(planned, actual, 60);
+  h += section(T('Planned vs actual study'),
+    '<div class="pvrow">'
+      + '<div class="pvlabel">'+esc(T('Planned'))+'</div>'
+      + '<div class="pvmain"><div class="pvtrack"><i style="width:'+Math.round(planned/maxv*100)+'%;background:linear-gradient(90deg,var(--cyan),var(--blue))"></i></div></div>'
+      + '<div class="pvval">'+Math.round(planned)+'m</div>'
+    + '</div>'
+    + '<div class="pvrow">'
+      + '<div class="pvlabel">'+esc(T('Actual'))+'</div>'
+      + '<div class="pvmain"><div class="pvtrack"><i style="width:'+Math.round(actual/maxv*100)+'%;background:linear-gradient(90deg,var(--violet),var(--teal))"></i></div></div>'
+      + '<div class="pvval">'+Math.round(actual)+'m</div>'
+    + '</div>'
+    + (wkSessions.length ? '' : '<div class="row empty" data-act="new" data-entity="session"><div class="ico" style="--c:#3d3d3d">'+svgIcon('plus')+'</div><div class="row-main"><div class="row-title dim">'+esc(T('Add session'))+'</div></div></div>')
+  );
+
+  /* Course workload */
+  const cw = db.courses.map(c=>{
+    const open = db.tasks.filter(t=>!t.done && t.courseId===c.id);
+    const est = open.reduce((a,t)=>a + (Number(t.est)||0), 0);
+    return {c, open, est};
+  }).filter(x=>x.open.length);
+  h += section(T('Course workload'),
+    cw.length ? cw.slice(0,6).map(x=>row({
+      icon:'book', color:'var(--teal)',
+      title: esc(x.c.name),
+      desc: esc(x.open.length + ' ' + T('Open').toLowerCase() + (x.est ? ' · ' + x.est + 'm' : '')),
+      act:'open', entity:'course', id:x.c.id
+    })).join('') : emptyRow(T('No courses yet'), 'course')
+  );
+
+  /* Exam preparation */
+  const examPrep = db.tasks.filter(t=>!t.done && t.kind==='exam').sort(taskSort);
+  h += section(T('Exams & assignments'), examPrep.length ? examPrep.map(taskRow).join('') : emptyRow(T('Nothing scheduled'), 'task'));
+
+  /* Weekly review */
+  h += section(T('Weekly review'),
+    db.review.map(r=>
+      '<div class="row" data-act="reviewToggle" data-id="'+r.id+'">'
+        + '<button class="checkbox '+(r.done?'on':'')+'" data-act="reviewToggle" data-id="'+r.id+'">'+(r.done?svgIcon('check'):'')+'</button>'
+        + '<div class="row-main"><div class="row-title '+(r.done?'done':'')+'" style="white-space:normal">'+esc(r.text)+'</div></div>'
+      + '</div>'
+    ).join(''),
+    '<button class="seclink" data-act="reviewReset">'+esc(T('Reset checklist'))+'</button>'
+  );
+
+  return h;
+}
+
+/* =========================================================
+   VIEWS — RESEARCH
+   ========================================================= */
+function viewResearch(){
+  let h = '';
+
+  /* Reading status summary */
+  const q = db.papers.filter(p=>p.status==='queue').length;
+  const r = db.papers.filter(p=>p.status==='reading').length;
+  const d = db.papers.filter(p=>p.status==='done').length;
+  h += section(T('Reading status summary'),
+    '<div class="pvrow">'
+      + '<div class="pvlabel">'+esc(T('Queued'))+'</div>'
+      + '<div class="pvmain"><div class="pvtrack"><i style="width:'+ (db.papers.length? Math.round(q/db.papers.length*100):0) +'%;background:var(--violet)"></i></div></div>'
+      + '<div class="pvval">'+q+'</div>'
+    + '</div>'
+    + '<div class="pvrow">'
+      + '<div class="pvlabel">'+esc(T('Reading'))+'</div>'
+      + '<div class="pvmain"><div class="pvtrack"><i style="width:'+ (db.papers.length? Math.round(r/db.papers.length*100):0) +'%;background:var(--amber)"></i></div></div>'
+      + '<div class="pvval">'+r+'</div>'
+    + '</div>'
+    + '<div class="pvrow">'
+      + '<div class="pvlabel">'+esc(T('Read'))+'</div>'
+      + '<div class="pvmain"><div class="pvtrack"><i style="width:'+ (db.papers.length? Math.round(d/db.papers.length*100):0) +'%;background:var(--teal)"></i></div></div>'
+      + '<div class="pvval">'+d+'</div>'
+    + '</div>'
+  );
+
+  /* Saved papers */
+  h += section(T('Saved papers'),
+    db.papers.length ? db.papers.slice(0,6).map(paperRow).join('') : emptyRow(T('No papers saved'), 'paper'),
+    '<button class="seclink" data-act="new" data-entity="paper">'+esc(T('Add paper'))+'</button>'
+  );
+
+  /* Research notes */
+  h += section(T('Research notes'),
+    db.notes.length ? db.notes.slice(0,6).map(noteRow).join('') : emptyRow(T('No notes yet'), 'note'),
+    '<button class="seclink" data-act="new" data-entity="note">'+esc(T('Add note'))+'</button>'
+  );
+
+  /* Professor profiles */
+  h += section(T('Professor profiles'),
+    db.people.length ? db.people.map(personRow).join('') : emptyRow(T('No profiles yet'), 'person'),
+    '<button class="seclink" data-act="new" data-entity="person">'+esc(T('Add profile'))+'</button>'
+  );
+
+  /* Thesis & experiments */
+  h += section(T('Thesis & experiments'),
+    db.milestones.length ? db.milestones.map(milestoneRow).join('') : emptyRow(T('No milestones yet'), 'milestone'),
+    '<button class="seclink" data-act="new" data-entity="milestone">'+esc(T('Add milestone'))+'</button>'
+  );
+
+  /* Verified links */
+  const verified = []
+    .concat(db.papers.filter(p=>p.verified && p.url).map(p=>({t:p.title, u:p.url, e:'paper', id:p.id})))
+    .concat(db.people.filter(p=>p.url).map(p=>({t:p.name, u:p.url, e:'person', id:p.id})))
+    .concat(db.apps.filter(a=>a.sourceUrl).map(a=>({t:a.institution, u:a.sourceUrl, e:'app', id:a.id})));
+  h += section(T('Verified source links'),
+    verified.length
+      ? verified.slice(0,8).map(v=>
+          '<div class="row" data-act="open" data-entity="'+v.e+'" data-id="'+v.id+'">'
+            + '<div class="ico" style="--c:var(--teal)">'+svgIcon('link')+'</div>'
+            + '<div class="row-main"><div class="row-title">'+esc(v.t)+'</div>'
+            + '<div class="row-desc">'+esc(v.u)+'</div></div>'
+            + '<div class="row-side"><div class="row-meta">'+esc(T('Verified'))+'</div></div>'
+          + '</div>').join('')
+      : '<div class="row empty"><div class="ico" style="--c:#3d3d3d">'+svgIcon('link')+'</div>'
+        + '<div class="row-main"><div class="row-title dim">'+esc(T('No results'))+'</div>'
+        + '<div class="row-desc">'+esc(T('Mark a source as verified in a paper, profile, or application'))+'</div></div></div>'
+  );
+
+  return h;
+}
+
+/* =========================================================
+   VIEWS — APPLICATIONS
+   ========================================================= */
+function viewApps(){
+  let h = '';
+  const domestic = db.apps.filter(a=>a.scope==='domestic');
+  const intl = db.apps.filter(a=>a.scope!=='domestic');
+
+  h += section(T('Sharif / domestic preparation'),
+    domestic.length ? domestic.map(appRow).join('') : emptyRow(T('No applications yet'), 'app'),
+    '<button class="seclink" data-act="new" data-entity="app">'+esc(T('Add application'))+'</button>'
+  );
+  h += section(T('International PhD opportunities'),
+    intl.length ? intl.map(appRow).join('') : emptyRow(T('No applications yet'), 'app')
+  );
+
+  /* Verified deadlines */
+  const verified = db.apps.filter(a=>a.deadline && a.deadlineVerified).sort((a,b)=>a.deadline.localeCompare(b.deadline));
+  h += section(T('Verified deadlines'),
+    verified.length ? verified.map(a=>row({
+      icon:'cal', color:'var(--teal)',
+      title: esc(a.institution),
+      desc: esc([a.program, a.sourceUrl].filter(Boolean).join(' · ')),
+      meta: esc(fmtDate(a.deadline)),
+      act:'open', entity:'app', id:a.id
+    })).join('') : emptyRow(T('No deadlines tracked'), 'app')
+  );
+
+  /* Unverified deadlines */
+  const unverified = db.apps.filter(a=>a.deadline && !a.deadlineVerified).sort((a,b)=>a.deadline.localeCompare(b.deadline));
+  if(unverified.length){
+    h += section(T('Deadline') + ' — ' + T('Manually entered'),
+      unverified.map(a=>row({
+        icon:'cal', color:'var(--amber)',
+        title: esc(a.institution),
+        desc: esc(a.program||''),
+        meta: esc(fmtDate(a.deadline)),
+        act:'open', entity:'app', id:a.id
+      })).join('')
+    );
+  }
+
+  /* Funding */
+  const funded = db.apps.filter(a=>a.funding);
+  h += section(T('Funding status'),
+    funded.length ? funded.map(a=>row({
+      icon:'apps', color:'var(--violet)',
+      title: esc(a.institution),
+      desc: esc(a.funding),
+      act:'open', entity:'app', id:a.id
+    })).join('') : emptyRow(T('No applications yet'), 'app')
+  );
+
+  /* Missing documents & next steps */
+  const missing = [];
+  db.apps.forEach(a=>{
+    (a.docs||[]).forEach(d=>{ if(!d.have) missing.push({a, name:d.name}); });
+    (a.reqs||[]).forEach(r=>{ if(!r.met) missing.push({a, name:r.text}); });
+  });
+  const nextSteps = db.apps.filter(a=>a.nextStep);
+  h += section(T('Missing documents & next steps'),
+    (missing.length || nextSteps.length)
+      ? missing.slice(0,6).map(m=>row({
+          icon:'doc', color:'var(--rose)',
+          title: esc(m.name),
+          desc: esc(m.a.institution),
+          act:'open', entity:'app', id:m.a.id
+        })).join('')
+        + nextSteps.slice(0,6).map(a=>row({
+          icon:'target', color:'var(--cyan)',
+          title: esc(a.nextStep),
+          desc: esc(a.institution),
+          act:'open', entity:'app', id:a.id
+        })).join('')
+      : emptyRow(T('No applications yet'), 'app')
+  );
+
+  return h;
+}
+
+/* =========================================================
+   VIEWS — CALENDAR
+   ========================================================= */
+function viewCalendar(){
+  const ws = weekStartDate(state.calOffset);
+  const days = Array.from({length:7}, (_,i)=>addDays(ws,i));
+  const range = fmtDate(isoOf(days[0])) + ' – ' + fmtDate(isoOf(days[6]));
+  let h = '<div class="pvrow" style="border-top:none">'
+    + '<button class="btn small" data-act="calPrev">‹ '+esc(T('Prev'))+'</button>'
+    + '<div class="pvmain" style="text-align:center;font-size:13px;font-weight:650;color:#ddd">'+esc(range)+'</div>'
+    + '<button class="btn small" data-act="calNext">'+esc(T('Next'))+' ›</button>'
+    + '</div>';
+
+  days.forEach((d,i)=>{
+    const iso = isoOf(d);
+    const items = dayItems(iso);
+    const isToday = iso === todayISO();
+    h += '<section class="sec" style="margin-top:10px">'
+      + '<div class="sec-head"><h2 style="'+(isToday?'color:var(--cyan)':'')+'">'+esc(weekdayShort(d))+' '+d.getDate()+'</h2>'
+      + '<button class="seclink" data-act="new" data-entity="session">+ '+esc(T('Session'))+'</button></div>'
+      + '<div class="rows">'
+      + (items.length ? items.map(x=>{
+          const ent = x.type;
+          const ic = ent==='session'?'clock':ent==='app'?'apps':ent==='milestone'?'flag':'task';
+          const col = ent==='session'?'var(--blue)':ent==='app'?'var(--violet)':ent==='milestone'?'var(--rose)':'var(--cyan)';
+          return row({
+            icon: ic, color: col,
+            title: esc(x.title),
+            desc: ent==='session' ? esc((x.ref.start||'').slice(11,16)) : '',
+            act:'open', entity: ent, id: x.ref.id
+          });
+        }).join('')
+        : '<div class="row empty" style="border-top:none"><div class="ico" style="--c:#333">'+svgIcon('cal')+'</div>'
+          + '<div class="row-main"><div class="row-title dim">'+esc(T('Nothing scheduled for this day'))+'</div></div></div>')
+      + '</div></section>';
+  });
+  return h;
+}
+
+/* =========================================================
+   VIEWS — TASKS & COURSES
+   ========================================================= */
+function viewTasks(){
+  const sub = state.taskSub || 'tasks';
+  let h = '<div class="subtabs">'
+    + '<button class="subtab '+(sub==='tasks'?'on':'')+'" data-act="taskSub" data-v="tasks">'+esc(T('Tasks'))+'</button>'
+    + '<button class="subtab '+(sub==='courses'?'on':'')+'" data-act="taskSub" data-v="courses">'+esc(T('Courses & grades'))+'</button>'
+    + '</div>';
+
+  if(sub === 'courses'){
+    h += '<div class="rows" style="border-top:1px solid var(--line);margin-top:10px">'
+      + (db.courses.length ? db.courses.map(courseRowFull).join('') : emptyRow(T('No courses yet'), 'course'))
+      + '</div>'
+      + '<div class="pad"><button class="btn primary wide" data-act="new" data-entity="course">'+esc(T('Add course'))+'</button></div>';
+    return h;
+  }
+
+  const f = state.taskFilter || 'open';
+  const filters = [['open','Open'],['all','All'],['done','Done'],['overdue','Overdue']];
+  h += '<div class="chips">' + filters.map(([k,l])=>
+    '<button class="chipbtn '+(f===k?'on':'')+'" data-act="taskFilter" data-v="'+k+'">'+esc(T(l))+'</button>'
+  ).join('') + '</div>';
+
+  let list = db.tasks.slice();
+  if(f === 'open') list = list.filter(t=>!t.done);
+  if(f === 'done') list = list.filter(t=>t.done);
+  if(f === 'overdue') list = list.filter(t=>!t.done && t.due && t.due < todayISO());
+  list.sort(taskSort);
+
+  h += '<div class="rows" style="margin-top:8px">'
+    + (list.length ? list.map(taskRowFull).join('') : emptyRow(T('No tasks here'), 'task'))
+    + '</div>'
+    + '<div class="pad"><button class="btn primary wide" data-act="new" data-entity="task">'+esc(T('New task'))+'</button></div>';
+  return h;
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function render(){
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = LANG === 'fa' ? 'rtl' : 'ltr';
+  renderTop();
+  renderBottomNav();
+  renderRail();
+  const v = $('#view');
+  if(state.screen === 'workspace'){
+    v.innerHTML = state.tab === 'today' ? viewToday()
+      : state.tab === 'week' ? viewWeek()
+      : state.tab === 'research' ? viewResearch()
+      : viewApps();
+  } else if(state.screen === 'calendar'){
+    v.innerHTML = viewCalendar();
+  } else {
+    v.innerHTML = viewTasks();
+  }
+  window.scrollTo({top:0, behavior:'instant'});
+}
+
+/* =========================================================
+   SHEETS
+   ========================================================= */
+function showSheet(inner, opts){
+  opts = opts || {};
+  const layer = document.createElement('div');
+  layer.className = 'sheet-layer';
+  layer.innerHTML = '<div class="sheet '+(opts.cls||'')+'">' + inner + '</div>';
+  $('#layers').appendChild(layer);
+  requestAnimationFrame(()=>layer.classList.add('in'));
+  layer.addEventListener('click', e=>{ if(e.target === layer) closeSheet(layer); });
+  return layer;
+}
+function closeSheet(layer, instant){
+  if(!layer) return;
+  if(instant){ layer.remove(); return; }
+  layer.classList.remove('in');
+  setTimeout(()=>layer.remove(), 170);
+}
+function closeAllSheets(){ $$('.sheet-layer').forEach(l=>l.remove()); }
+
+/* =========================================================
+   FORM RENDERING
+   ========================================================= */
+function renderField(f, val){
+  const id = 'f_' + f.k;
+  const label = '<label class="flabel" for="'+id+'">'+esc(T(f.l))+'</label>';
+  if(f.t === 'check'){
+    return '<div class="field field-check">'
+      + '<label class="flabel" for="'+id+'">'+esc(T(f.l))+'</label>'
+      + '<input type="checkbox" id="'+id+'" name="'+f.k+'" '+(val?'checked':'')+'>'
+      + '</div>';
+  }
+  let input;
+  if(f.t === 'textarea'){
+    input = '<textarea id="'+id+'" name="'+f.k+'" rows="3">'+esc(val||'')+'</textarea>';
+  } else if(f.t === 'select'){
+    input = '<select id="'+id+'" name="'+f.k+'">'
+      + f.o.map(([v,l])=>'<option value="'+v+'" '+(String(val)===v?'selected':'')+'>'+esc(T(l))+'</option>').join('')
+      + '</select>';
+  } else if(f.t === 'course'){
+    input = '<select id="'+id+'" name="'+f.k+'">'
+      + '<option value="">'+esc(T('none'))+'</option>'
+      + db.courses.map(c=>'<option value="'+c.id+'" '+(val===c.id?'selected':'')+'>'+esc(c.name)+'</option>').join('')
+      + '</select>';
+  } else if(f.t === 'paper'){
+    input = '<select id="'+id+'" name="'+f.k+'">'
+      + '<option value="">'+esc(T('none'))+'</option>'
+      + db.papers.map(p=>'<option value="'+p.id+'" '+(val===p.id?'selected':'')+'>'+esc(p.title)+'</option>').join('')
+      + '</select>';
+  } else if(f.t === 'number'){
+    input = '<input id="'+id+'" name="'+f.k+'" type="number" min="0" inputmode="numeric" value="'+esc(val==null?'':val)+'">';
+  } else if(f.t === 'date'){
+    input = '<input id="'+id+'" name="'+f.k+'" type="date" value="'+esc(val||'')+'">';
+  } else if(f.t === 'datetime-local'){
+    input = '<input id="'+id+'" name="'+f.k+'" type="datetime-local" value="'+esc(val||'')+'">';
+  } else {
+    input = '<input id="'+id+'" name="'+f.k+'" type="'+f.t+'" value="'+esc(val==null?'':val)+'">';
+  }
+  return '<div class="field">'+label+input+'</div>';
+}
+function readForm(form, schema){
+  const out = {};
+  schema.fields.forEach(f=>{
+    const el = form.elements[f.k];
+    if(!el) return;
+    if(f.t === 'check') out[f.k] = el.checked;
+    else if(f.t === 'number') out[f.k] = el.value === '' ? null : Number(el.value);
+    else out[f.k] = el.value.trim();
+  });
+  return out;
+}
+
+/* =========================================================
+   EDITOR
+   ========================================================= */
+function openEditor(entity, id){
+  const schema = SCHEMAS[entity];
+  if(!schema) return;
+  const isNew = !id;
+  const item = isNew ? Object.assign({}, schema.defaults || {}) : db[schema.store].find(x=>x.id === id);
+  if(!item) return;
+  if(isNew && entity === 'session' && !item.start) item.start = nowLocal();
+
+  const title = isNew ? (T('New') + ' · ' + T(schema.singular)) : (T('Edit') + ' · ' + T(schema.singular));
+
+  const layer = showSheet(
+    '<div class="sheet-head">'
+      + '<button class="btn-ghost" data-close>'+esc(T('Cancel'))+'</button>'
+      + '<div class="sheet-title">'+esc(title)+'</div>'
+      + '<button class="btn-text" data-save>'+esc(T('Save'))+'</button>'
+    + '</div>'
+    + '<div class="sheet-body"><form id="editForm" autocomplete="off">'
+      + schema.fields.map(f=>renderField(f, item[f.k])).join('')
+    + '</form></div>',
+    {cls:'full'}
+  );
+
+  layer.querySelector('[data-close]').onclick = ()=>closeSheet(layer);
+  layer.querySelector('[data-save]').onclick = ()=>{
+    const form = layer.querySelector('#editForm');
+    const data = readForm(form, schema);
+    const reqMissing = schema.fields.some(f=>f.req && !data[f.k]);
+    if(reqMissing){ toast(T('Required field missing')); return; }
+    if(isNew){
+      const rec = Object.assign({id:uid(), createdAt:new Date().toISOString()}, schema.defaults || {}, data);
+      db[schema.store].push(rec);
+    } else {
+      Object.assign(item, data);
+    }
+    saveDB();
+    closeSheet(layer);
+    render();
+    toast(T('Save'));
+  };
+}
+
+/* =========================================================
+   DETAIL
+   ========================================================= */
+function detailFields(entity, item){
+  const schema = SCHEMAS[entity];
+  return schema.fields.map(f=>{
+    let v = item[f.k];
+    if(f.t === 'check') v = v ? T('Yes') : T('No');
+    else if(f.t === 'select'){
+      const found = (f.o||[]).find(o=>o[0] === String(v));
+      v = found ? T(found[1]) : v;
+    } else if(f.t === 'course'){ v = courseName(v) || '—'; }
+    else if(f.t === 'paper'){ const p = db.papers.find(p=>p.id === v); v = p ? p.title : '—'; }
+    if(v === '' || v == null) return '';
+    const isUrl = f.t === 'url';
+    return '<div class="drow"><div class="dlabel">'+esc(T(f.l))+'</div>'
+      + '<div class="dval">' + (isUrl
+          ? '<a href="'+esc(v)+'" target="_blank" rel="noopener noreferrer">'+esc(v)+'</a>'
+          : esc(v)) + '</div></div>';
+  }).join('');
+}
+
+function openDetail(entity, id){
+  const schema = SCHEMAS[entity];
+  if(!schema) return;
+  const item = db[schema.store].find(x=>x.id === id);
+  if(!item) return;
+
+  const title = item.title || item.name || item.institution || T(schema.singular);
+  let extras = '';
+
+  /* toggle complete for tasks & milestones */
+  if(entity === 'task' || entity === 'milestone'){
+    extras += '<div class="sheet-actions">'
+      + '<button class="btn '+(item.done?'':'primary')+'" data-toggle="1">'
+      + esc(item.done ? T('Mark as open') : T('Mark complete')) + '</button></div>';
+  }
+
+  /* session logging */
+  if(entity === 'session'){
+    extras += '<div class="logbox">'
+      + '<label>'+esc(T('Log study time (minutes)'))+'</label>'
+      + '<div class="logrow">'
+        + '<input type="number" min="0" inputmode="numeric" id="logMin" placeholder="30">'
+        + '<button class="btn primary" data-log="1">'+esc(T('Log'))+'</button>'
+      + '</div>'
+      + '<label>'+esc(T('Learning outcome'))+'</label>'
+      + '<textarea id="logOutcome" rows="2">'+esc(item.outcome||'')+'</textarea>'
+      + '<div style="margin-top:10px"><button class="btn wide" data-outcome="1">'+esc(T('Save'))+'</button></div>'
+    + '</div>';
+  }
+
+  /* application docs & requirements */
+  if(entity === 'app'){
+    const docs = item.docs || [];
+    const reqs = item.reqs || [];
+    extras += '<div class="subsec"><div class="subhead">'+esc(T('Documents'))+'</div>'
+      + (docs.length
+          ? docs.map((d,i)=>'<div class="docrow"><span class="'+(d.have?'have':'')+'">'+esc(d.name)+'</span>'
+              + '<button class="mini" data-doctoggle="'+i+'">'+(d.have?'✓':T('Mark'))+'</button>'
+              + '<button class="mini danger" data-docdel="'+i+'">✕</button></div>').join('')
+          : '<div class="dimtext">'+esc(T('No documents listed'))+'</div>')
+      + '<div class="addrow"><input id="docName" placeholder="'+esc(T('Document name'))+'">'
+      + '<button class="btn small" data-docadd="1">'+esc(T('Add'))+'</button></div>'
+    + '</div>';
+    extras += '<div class="subsec"><div class="subhead">'+esc(T('Eligibility requirements'))+'</div>'
+      + (reqs.length
+          ? reqs.map((r,i)=>'<div class="docrow"><span class="'+(r.met?'have':'')+'">'+esc(r.text)+'</span>'
+              + '<button class="mini" data-reqtoggle="'+i+'">'+(r.met?'✓':T('Mark'))+'</button>'
+              + '<button class="mini danger" data-reqdel="'+i+'">✕</button></div>').join('')
+          : '<div class="dimtext">'+esc(T('No documents listed'))+'</div>')
+      + '<div class="addrow"><input id="reqText" placeholder="'+esc(T('Eligibility requirements'))+'">'
+      + '<button class="btn small" data-reqadd="1">'+esc(T('Add'))+'</button></div>'
+    + '</div>';
+  }
+
+  const layer = showSheet(
+    '<div class="sheet-head">'
+      + '<button class="btn-ghost" data-close style="font-size:13px">'+esc(T('Close'))+'</button>'
+      + '<div class="sheet-title">'+esc(title)+'</div>'
+      + '<button class="btn-text" data-edit>'+esc(T('Edit'))+'</button>'
+    + '</div>'
+    + '<div class="sheet-body">'
+      + detailFields(entity, item)
+      + extras
+      + '<div class="sheet-actions">'
+        + '<button class="btn danger" data-del>'+esc(T('Delete'))+'</button>'
+      + '</div>'
+    + '</div>',
+    {cls:'full'}
+  );
+
+  const refresh = ()=>{ closeSheet(layer, true); openDetail(entity, id); };
+
+  layer.querySelector('[data-close]').onclick = ()=>closeSheet(layer);
+  layer.querySelector('[data-edit]').onclick = ()=>{ closeSheet(layer, true); openEditor(entity, id); };
+
+  const tgl = layer.querySelector('[data-toggle]');
+  if(tgl) tgl.onclick = ()=>{ item.done = !item.done; saveDB(); render(); refresh(); };
+
+  const del = layer.querySelector('[data-del]');
+  del.onclick = ()=>{
+    if(!confirm(T('Delete') + '? — ' + title)) return;
+    const arr = db[schema.store];
+    const idx = arr.findIndex(x=>x.id === id);
+    if(idx >= 0) arr.splice(idx,1);
+    if(entity === 'course'){
+      db.tasks.forEach(t=>{ if(t.courseId === id) t.courseId = ''; });
+      db.sessions.forEach(s=>{ if(s.courseId === id) s.courseId = ''; });
+    }
+    if(entity === 'paper'){
+      db.notes.forEach(n=>{ if(n.paperId === id) n.paperId = ''; });
+    }
+    saveDB(); closeSheet(layer, true); render(); toast(T('Delete'));
+  };
+
+  const logBtn = layer.querySelector('[data-log]');
+  if(logBtn) logBtn.onclick = ()=>{
+    const inp = layer.querySelector('#logMin');
+    const val = Number(inp.value);
+    if(!val || val < 0){ toast(T('Required field missing')); return; }
+    item.logged = (Number(item.logged)||0) + val;
+    saveDB(); render(); refresh();
+  };
+  const outBtn = layer.querySelector('[data-outcome]');
+  if(outBtn) outBtn.onclick = ()=>{
+    item.outcome = layer.querySelector('#logOutcome').value.trim();
+    saveDB(); render(); toast(T('Save'));
+  };
+
+  if(entity === 'app'){
+    item.docs = item.docs || [];
+    item.reqs = item.reqs || [];
+    layer.querySelectorAll('[data-doctoggle]').forEach(b=>b.onclick = ()=>{
+      const i = Number(b.dataset.doctoggle); item.docs[i].have = !item.docs[i].have; saveDB(); refresh();
+    });
+    layer.querySelectorAll('[data-docdel]').forEach(b=>b.onclick = ()=>{
+      const i = Number(b.dataset.docdel); item.docs.splice(i,1); saveDB(); refresh();
+    });
+    const addDoc = layer.querySelector('[data-docadd]');
+    if(addDoc) addDoc.onclick = ()=>{
+      const v = layer.querySelector('#docName').value.trim();
+      if(!v){ toast(T('Required field missing')); return; }
+      item.docs.push({name:v, have:false}); saveDB(); refresh();
+    };
+    layer.querySelectorAll('[data-reqtoggle]').forEach(b=>b.onclick = ()=>{
+      const i = Number(b.dataset.reqtoggle); item.reqs[i].met = !item.reqs[i].met; saveDB(); refresh();
+    });
+    layer.querySelectorAll('[data-reqdel]').forEach(b=>b.onclick = ()=>{
+      const i = Number(b.dataset.reqdel); item.reqs.splice(i,1); saveDB(); refresh();
+    });
+    const addReq = layer.querySelector('[data-reqadd]');
+    if(addReq) addReq.onclick = ()=>{
+      const v = layer.querySelector('#reqText').value.trim();
+      if(!v){ toast(T('Required field missing')); return; }
+      item.reqs.push({text:v, met:false}); saveDB(); refresh();
+    };
+  }
+}
+
+/* =========================================================
+   CONTEXT MENU
+   ========================================================= */
+function openMenu(entity, id){
+  const schema = SCHEMAS[entity];
+  const item = db[schema.store].find(x=>x.id === id);
+  if(!item) return;
+  const layer = showSheet(
+    '<div class="sheet-head"><div class="sheet-title">'+esc(item.title || item.name || item.institution || T(schema.singular))+'</div></div>'
+    + '<div class="sheet-body" style="padding:0">'
+      + '<button class="menu-item" data-m="open">'+svgIcon('doc')+'<span>'+esc(T('Open'))+'</span></button>'
+      + '<button class="menu-item" data-m="edit">'+svgIcon('edit')+'<span>'+esc(T('Edit'))+'</span></button>'
+      + (entity === 'task' || entity === 'milestone'
+          ? '<button class="menu-item" data-m="toggle">'+svgIcon('check')+'<span>'+esc(item.done ? T('Mark as open') : T('Mark complete'))+'</span></button>'
+          : '')
+      + '<button class="menu-item danger" data-m="del">'+svgIcon('trash')+'<span>'+esc(T('Delete'))+'</span></button>'
+    + '</div>'
+  );
+  layer.querySelector('[data-m="open"]').onclick = ()=>{ closeSheet(layer, true); openDetail(entity, id); };
+  layer.querySelector('[data-m="edit"]').onclick = ()=>{ closeSheet(layer, true); openEditor(entity, id); };
+  const t = layer.querySelector('[data-m="toggle"]');
+  if(t) t.onclick = ()=>{ item.done = !item.done; saveDB(); closeSheet(layer, true); render(); };
+  layer.querySelector('[data-m="del"]').onclick = ()=>{
+    if(!confirm(T('Delete') + '?')) return;
+    const arr = db[schema.store];
+    const idx = arr.findIndex(x=>x.id === id);
+    if(idx >= 0) arr.splice(idx,1);
+    saveDB(); closeSheet(layer, true); render(); toast(T('Delete'));
+  };
+}
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+function openSearch(){
+  const layer = showSheet(
+    '<div class="sheet-head">'
+      + '<button class="btn-ghost" data-close>'+esc(T('Cancel'))+'</button>'
+      + '<div class="sheet-title">'+esc(T('Search'))+'</div>'
+      + '<span style="width:64px"></span>'
+    + '</div>'
+    + '<div class="sheet-body" style="padding-top:12px">'
+      + '<div class="searchbar">'+svgIcon('search')+'<input id="q" type="search" placeholder="'+esc(T('Search everything'))+'" autocomplete="off"></div>'
+      + '<div id="results"></div>'
+    + '</div>',
+    {cls:'full'}
+  );
+  const input = layer.querySelector('#q');
+  const results = layer.querySelector('#results');
+  layer.querySelector('[data-close]').onclick = ()=>closeSheet(layer);
+
+  const search = ()=>{
+    const q = input.value.trim().toLowerCase();
+    if(!q){ results.innerHTML = '<div class="rescount">'+esc(T('Search everything'))+'</div>'; return; }
+    const hits = [];
+    const test = (...vals)=>vals.filter(Boolean).join(' ').toLowerCase().indexOf(q) !== -1;
+
+    db.tasks.forEach(t=>{ if(test(t.title, t.note, courseName(t.courseId))) hits.push({e:'task', id:t.id, title:t.title, sub:courseName(t.courseId)||T('Task'), icon:'task', color:'var(--cyan)'}); });
+    db.sessions.forEach(s=>{ if(test(s.title, s.outcome, courseName(s.courseId))) hits.push({e:'session', id:s.id, title:s.title, sub:(s.start||'').replace('T',' '), icon:'clock', color:'var(--blue)'}); });
+    db.courses.forEach(c=>{ if(test(c.name, c.code, c.grade)) hits.push({e:'course', id:c.id, title:c.name, sub:c.code||T('Course'), icon:'book', color:'var(--teal)'}); });
+    db.papers.forEach(p=>{ if(test(p.title, p.authors, p.venue, p.note)) hits.push({e:'paper', id:p.id, title:p.title, sub:p.authors||T('Paper'), icon:'research', color:'var(--violet)'}); });
+    db.notes.forEach(n=>{ if(test(n.title, n.body)) hits.push({e:'note', id:n.id, title:n.title, sub:n.body||T('Note'), icon:'doc', color:'var(--amber)'}); });
+    db.people.forEach(p=>{ if(test(p.name, p.affiliation, p.area, p.note)) hits.push({e:'person', id:p.id, title:p.name, sub:p.affiliation||T('Profile'), icon:'user', color:'var(--blue)'}); });
+    db.milestones.forEach(m=>{ if(test(m.title, m.note)) hits.push({e:'milestone', id:m.id, title:m.title, sub:m.note||T('Milestone'), icon:'flag', color:'var(--rose)'}); });
+    db.apps.forEach(a=>{ if(test(a.institution, a.program, a.funding, a.nextStep, a.note)) hits.push({e:'app', id:a.id, title:a.institution, sub:a.program||T('Application'), icon:'apps', color:'var(--teal)'}); });
+
+    if(!hits.length){
+      results.innerHTML = '<div class="rescount">'+esc(T('No results'))+'</div>';
+      return;
+    }
+    results.innerHTML = '<div class="rescount">'+hits.length+'</div>'
+      + '<div class="rows">' + hits.slice(0,60).map(h=>
+          '<div class="row" data-act="searchopen" data-entity="'+h.e+'" data-id="'+h.id+'">'
+            + '<div class="ico" style="--c:'+h.color+'">'+svgIcon(h.icon)+'</div>'
+            + '<div class="row-main"><div class="row-title">'+esc(h.title)+'</div>'
+            + '<div class="row-desc">'+esc(h.sub)+'</div></div></div>'
+        ).join('') + '</div>';
+  };
+  input.addEventListener('input', search);
+  search();
+  setTimeout(()=>input.focus(), 220);
+}
+
+/* =========================================================
+   NOTIFICATIONS PANEL
+   ========================================================= */
+function openNotifications(){
+  const list = notifications();
+  const layer = showSheet(
+    '<div class="sheet-head">'
+      + '<span style="width:64px"></span>'
+      + '<div class="sheet-title">'+esc(T('Notifications'))+'</div>'
+      + '<button class="btn-ghost" data-close style="width:64px;text-align:end">'+esc(T('Close'))+'</button>'
+    + '</div>'
+    + '<div class="sheet-body" style="padding:0">'
+      + (list.length
+          ? '<div class="rows">' + list.map(n=>
+              '<div class="row" data-act="searchopen" data-entity="'+n.entity+'" data-id="'+n.id+'">'
+                + '<div class="ico" style="--c:'+(n.kind==='overdue'?'var(--rose)':n.kind==='today'?'var(--amber)':'var(--cyan)')+'">'
+                + svgIcon(n.kind==='app'?'apps':n.kind==='exam'?'flag':'task')+'</div>'
+                + '<div class="row-main"><div class="row-title">'+esc(n.title)+'</div>'
+                + '<div class="row-desc">'+esc(n.sub)+'</div></div></div>'
+            ).join('') + '</div>'
+          : '<div class="blank"><div class="ico" style="--c:var(--teal)">'+svgIcon('check')+'</div><p>'+esc(T('No notifications'))+'</p></div>')
+    + '</div>',
+    {cls:'full'}
+  );
+  layer.querySelector('[data-close]').onclick = ()=>closeSheet(layer);
+}
+
+/* =========================================================
+   SETTINGS
+   ========================================================= */
+function openSettings(){
+  const layer = showSheet(
+    '<div class="sheet-head">'
+      + '<span style="width:64px"></span>'
+      + '<div class="sheet-title">'+esc(T('Settings'))+'</div>'
+      + '<button class="btn-ghost" data-close style="width:64px;text-align:end">'+esc(T('Close'))+'</button>'
+    + '</div>'
+    + '<div class="sheet-body">'
+      + '<div class="field"><label class="flabel">'+esc(T('Display name'))+'</label>'
+        + '<input id="setName" type="text" value="'+esc(db.settings.name||'')+'" placeholder="ALI"></div>'
+      + '<div class="field"><label class="flabel">'+esc(T('Language'))+'</label>'
+        + '<select id="setLang">'
+          + '<option value="en" '+(db.settings.lang==='en'?'selected':'')+'>English (LTR)</option>'
+          + '<option value="fa" '+(db.settings.lang==='fa'?'selected':'')+'>فارسی (RTL)</option>'
+        + '</select></div>'
+      + '<div class="subsec"><div class="subhead">'+esc(T('Data'))+'</div>'
+        + '<button class="menu-item" data-exp style="padding-inline:0">'+svgIcon('download')+'<span>'+esc(T('Export data'))+'</span></button>'
+        + '<button class="menu-item" data-imp style="padding-inline:0">'+svgIcon('upload')+'<span>'+esc(T('Restore data'))+'</span></button>'
+        + '<button class="menu-item danger" data-reset style="padding-inline:0">'+svgIcon('trash')+'<span>'+esc(T('Reset all data'))+'</span></button>'
+      + '</div>'
+      + '<div class="dimtext" style="margin-top:16px;font-size:12px;line-height:1.5">'
+        + 'All data is stored locally in this browser. Research and application facts must be verified against official sources — entries you add manually are marked as such.'
+      + '</div>'
+    + '</div>',
+    {cls:'full'}
+  );
+  layer.querySelector('[data-close]').onclick = ()=>closeSheet(layer);
+
+  layer.querySelector('#setName').onchange = e=>{ db.settings.name = e.target.value.trim(); saveDB(); render(); };
+  layer.querySelector('#setLang').onchange = e=>{
+    db.settings.lang = e.target.value; LANG = e.target.value; saveDB();
+    closeSheet(layer, true); render(); openSettings();
+  };
+
+  layer.querySelector('[data-exp]').onclick = ()=>{
+    const blob = new Blob([JSON.stringify(db, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ali-mission-control-' + todayISO() + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
+    toast(T('Export data'));
+  };
+
+  layer.querySelector('[data-imp]').onclick = ()=>{
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'application/json,.json';
+    inp.onchange = ()=>{
+      const file = inp.files && inp.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const parsed = JSON.parse(String(reader.result));
+          if(!parsed || typeof parsed !== 'object' || !parsed.version) throw new Error('bad');
+          db = parsed;
+          const d = defaultDB();
+          Object.keys(d).forEach(k=>{ if(db[k] === undefined) db[k] = d[k]; });
+          if(!db.settings) db.settings = d.settings;
+          LANG = db.settings.lang || 'en';
+          saveDB(); closeSheet(layer, true); render(); toast(T('Restore data'));
+        }catch(err){ toast('Invalid backup file'); }
+      };
+      reader.readAsText(file);
+    };
+    inp.click();
+  };
+
+  layer.querySelector('[data-reset]').onclick = ()=>{
+    if(!confirm(T('Reset all data') + '?')) return;
+    db = defaultDB(); LANG = 'en'; saveDB();
+    closeSheet(layer, true); render(); toast(T('Reset all data'));
+  };
+}
+
+/* =========================================================
+   DAY SHEET
+   ========================================================= */
+function openDay(iso){
+  const items = dayItems(iso);
+  const layer = showSheet(
+    '<div class="sheet-head">'
+      + '<span style="width:64px"></span>'
+      + '<div class="sheet-title">'+esc(fmtDate(iso))+'</div>'
+      + '<button class="btn-ghost" data-close style="width:64px;text-align:end">'+esc(T('Close'))+'</button>'
+    + '</div>'
+    + '<div class="sheet-body" style="padding:0">'
+      + (items.length
+          ? '<div class="rows">' + items.map(x=>{
+              const ent = x.type;
+              const ic = ent==='session'?'clock':ent==='app'?'apps':ent==='milestone'?'flag':'task';
+              const col = ent==='session'?'var(--blue)':ent==='app'?'var(--violet)':ent==='milestone'?'var(--rose)':'var(--cyan)';
+              return '<div class="row" data-act="searchopen" data-entity="'+ent+'" data-id="'+x.ref.id+'">'
+                + '<div class="ico" style="--c:'+col+'">'+svgIcon(ic)+'</div>'
+                + '<div class="row-main"><div class="row-title">'+esc(x.title)+'</div>'
+                + '<div class="row-desc">'+esc(ent==='session' ? (x.ref.start||'').slice(11,16) : T(SCHEMAS[ent].singular))+'</div></div></div>';
+            }).join('') + '</div>'
+          : '<div class="blank"><div class="ico" style="--c:var(--dim2)">'+svgIcon('cal')+'</div><p>'+esc(T('Nothing scheduled for this day'))+'</p></div>')
+    + '</div>',
+    {cls:'full'}
+  );
+  layer.querySelector('[data-close]').onclick = ()=>closeSheet(layer);
+}
+
+/* =========================================================
+   EVENT DELEGATION
+   ========================================================= */
+document.addEventListener('click', function(e){
+  const el = e.target.closest('[data-act]');
+  if(!el) return;
+  const act = el.dataset.act;
+  const entity = el.dataset.entity;
+  const id = el.dataset.id;
+
+  switch(act){
+    case 'tab':
+      state.tab = el.dataset.tab;
+      state.screen = 'workspace';
+      render();
+      break;
+
+    case 'nav': {
+      const n = el.dataset.nav;
+      if(n === 'ai'){ openAI(); return; }
+      else if(n === 'home'){ state.screen = 'workspace'; state.tab = 'today'; }
+      else if(n === 'calendar'){ state.screen = 'calendar'; }
+      else if(n === 'tasks'){ state.screen = 'tasks'; }
+      else if(n === 'research'){ state.screen = 'workspace'; state.tab = 'research'; }
+      else if(n === 'apps'){ state.screen = 'workspace'; state.tab = 'apps'; }
+      render();
+      break;
+    }
+
+    case 'railToggle':
+      db.settings.rail = !db.settings.rail; saveDB(); renderRail();
+      break;
+
+    case 'search': openSearch(); break;
+    case 'notifications': openNotifications(); break;
+    case 'settings': openSettings(); break;
+
+    case 'new':
+      openEditor(entity);
+      break;
+
+    case 'open':
+      openDetail(entity, id);
+      break;
+
+    case 'menu':
+      openMenu(entity, id);
+      break;
+
+    case 'searchopen':
+      closeAllSheets();
+      openDetail(entity, id);
+      break;
+
+    case 'toggleTask': {
+      const t = db.tasks.find(x=>x.id === id);
+      if(t){ t.done = !t.done; saveDB(); render(); }
+      break;
+    }
+
+    case 'taskSub':
+      state.taskSub = el.dataset.v;
+      render();
+      break;
+
+    case 'taskFilter':
+      state.taskFilter = el.dataset.v;
+      render();
+      break;
+
+    case 'reviewToggle': {
+      const r = db.review.find(x=>x.id === id);
+      if(r){ r.done = !r.done; saveDB(); render(); }
+      break;
+    }
+
+    case 'reviewReset':
+      db.review.forEach(r=>r.done = false);
+      saveDB(); render();
+      break;
+
+    case 'calPrev':
+      state.calOffset -= 1; render();
+      break;
+
+    case 'calNext':
+      state.calOffset += 1; render();
+      break;
+
+    case 'day':
+      openDay(el.dataset.date);
+      break;
+  }
+});
+
+/* keyboard: Escape closes the topmost sheet */
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){
+    const layers = $$('.sheet-layer');
+    if(layers.length) closeSheet(layers[layers.length-1]);
+  }
+});
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+/* =========================================================
+   UNI-pelan AI  (standalone: browser talks directly to the provider
+   with the user's own key; key is kept outside the plan data)
+   ========================================================= */
+const AI_KEY='uni-pelan-ai.settings.v1';
+const AI_MAX=25*1024*1024;
+const AI_EXT=['flac','mp3','mp4','mpeg','mpga','m4a','ogg','oga','wav','webm'];
+const AI_SEG_MS=10000;
+const AIL={
+ title:['UNI-pelan AI','UNI-pelan AI'],
+ set:['Provider settings','تنظیمات سرویس'],
+ base:['Base URL (OpenAI-compatible)','نشانی پایه (سازگار با OpenAI)'],
+ key:['API key','کلید API'],
+ keyNote:['The key is stored only in this browser, separate from your plan data and backups, and is sent directly to the provider. Anyone who can use this browser profile can read it. Use a restricted key with a spend limit.','کلید فقط در همین مرورگر و جدا از داده‌های برنامه و پشتیبان‌ها ذخیره می‌شود و مستقیم به سرویس‌دهنده ارسال می‌شود. هر کس به این پروفایل مرورگر دسترسی داشته باشد می‌تواند آن را بخواند. از کلید محدودشده با سقف هزینه استفاده کنید.'],
+ load:['Save & load models','ذخیره و بارگذاری مدل‌ها'],
+ tModel:['Transcription model','مدل تبدیل گفتار به متن'],
+ cModel:['Text model (translate / refine)','مدل متن (ترجمه / ویرایش)'],
+ clearKey:['Remove key','حذف کلید'],
+ audio:['Audio','صدا'],
+ upload:['Upload audio file','بارگذاری فایل صوتی'],
+ rec:['Start recording','شروع ضبط'],
+ stop:['Stop','توقف'],
+ cancel:['Cancel','لغو'],
+ retry:['Retry failed segments','تلاش دوباره برای بخش‌های ناموفق'],
+ spLang:['Speech language','زبان گفتار'],
+ auto:['Auto','خودکار'],
+ fa:['Persian','فارسی'],en:['English','انگلیسی'],
+ text:['Text / transcript (editable)','متن / رونوشت (قابل ویرایش)'],
+ from:['From','از'],to:['To','به'],
+ swap:['Swap','جابه‌جایی'],
+ tr:['Translate','ترجمه'],
+ rf:['Correct text','اصلاح متن'],
+ out:['Result (editable)','نتیجه (قابل ویرایش)'],
+ copy:['Copy','کپی'],copied:['Copied','کپی شد'],
+ note:['Save as note','ذخیره به‌عنوان یادداشت'],
+ noteT:['Note title','عنوان یادداشت'],
+ gl:['Academic glossary','واژه‌نامه دانشگاهی'],
+ glFa:['Persian term','معادل فارسی'],glEn:['English term','معادل انگلیسی'],
+ glDom:['Domain (optional)','حوزه (اختیاری)'],glDef:['Definition (optional)','تعریف (اختیاری)'],
+ add:['Add','افزودن'],upd:['Update','به‌روزرسانی'],del:['Delete','حذف'],edit:['Edit','ویرایش'],
+ exp:['Export','برون‌بری'],imp:['Import','درون‌ریزی'],delAll:['Delete all','حذف همه'],
+ glNone:['No entries yet','هنوز واژه‌ای ثبت نشده'],
+ e_nokey:['Add your API key in Provider settings first.','ابتدا کلید API را در تنظیمات سرویس وارد کنید.'],
+ e_nomodel:['Choose a model in Provider settings (use "Save & load models").','در تنظیمات سرویس یک مدل انتخاب کنید («ذخیره و بارگذاری مدل‌ها»).'],
+ e_cancel:['Cancelled.','لغو شد.'],
+ e_timeout:['The request timed out.','زمان درخواست تمام شد.'],
+ e_net:['Network error. Check your connection and try again.','خطای شبکه. اتصال را بررسی و دوباره تلاش کنید.'],
+ e_offline:['You are offline.','اتصال اینترنت قطع است.'],
+ e_type:['Unsupported file type. Allowed: ','نوع فایل پشتیبانی نمی‌شود. مجاز: '],
+ e_big:['File is larger than 25 MB. Split or compress it first.','حجم فایل بیشتر از ۲۵ مگابایت است. ابتدا آن را کوتاه یا فشرده کنید.'],
+ e_empty:['No speech was detected in the audio.','گفتاری در صدا تشخیص داده نشد.'],
+ e_same:['Source and target languages are the same.','زبان مبدأ و مقصد یکسان است.'],
+ e_text:['Enter some text first.','ابتدا متنی وارد کنید.'],
+ e_mic:['Microphone needs a secure (https) page and a browser with recording support.','میکروفون به صفحه‌ی امن (https) و مرورگر دارای قابلیت ضبط نیاز دارد.'],
+ e_micDenied:['Microphone permission was denied.','دسترسی به میکروفون رد شد.'],
+ e_micErr:['Could not open the microphone.','باز کردن میکروفون ممکن نشد.'],
+ e_busy:['Another operation is running.','عملیات دیگری در حال اجراست.'],
+ e_badfile:['Invalid file.','فایل نامعتبر است.'],
+ e_url:['Base URL must start with https://','نشانی پایه باید با https:// شروع شود.'],
+ e_401:['The provider rejected the API key.','سرویس‌دهنده کلید API را نپذیرفت.'],
+ e_403:['Access denied for this key or model.','دسترسی این کلید یا مدل مجاز نیست.'],
+ e_404:['Model or endpoint not found. Check the model and Base URL.','مدل یا نشانی پیدا نشد. مدل و Base URL را بررسی کنید.'],
+ e_413:['The provider says the file is too large.','سرویس‌دهنده می‌گوید فایل بزرگ است.'],
+ e_429:['Rate limit or quota exceeded.','سقف نرخ یا اعتبار تمام شده است.'],
+ e_http:['Provider error ','خطای سرویس‌دهنده '],
+ s_trans:['Transcribing…','در حال تبدیل گفتار به متن…'],
+ s_tl:['Translating…','در حال ترجمه…'],
+ s_rf:['Correcting…','در حال اصلاح…'],
+ s_load:['Loading models…','در حال بارگذاری مدل‌ها…'],
+ s_done:['Done.','انجام شد.'],
+ s_saved:['Saved to notes.','در یادداشت‌ها ذخیره شد.'],
+ s_seg:['Segment failed: ','بخش ناموفق: '],
+ s_rec:['Recording','در حال ضبط'],
+ s_ok:['Models loaded.','مدل‌ها بارگذاری شد.'],
+ s_conf:['A conflicting entry exists: {x}. OK = replace it, Cancel = keep both as context-dependent alternatives.','واژه‌ی متضاد موجود است: {x}. تأیید = جایگزینی، لغو = نگه‌داشتن هر دو به‌عنوان گزینه‌های وابسته به بافت.'],
+ s_sure:['Delete?','حذف شود؟'],
+ s_saveq:['Save this text as a note?','این متن به‌عنوان یادداشت ذخیره شود؟']
+};
+const A=k=>(AIL[k]||[k,k])[LANG==='fa'?1:0];
+const aiSleep=ms=>new Promise(r=>setTimeout(r,ms));
+function aiCfg(){ const d={base:'https://api.openai.com/v1',key:'',tModel:'',cModel:''};
+  try{ return Object.assign(d,JSON.parse(localStorage.getItem(AI_KEY)||'{}')); }catch(e){ return d; } }
+function aiSave(c){ try{ localStorage.setItem(AI_KEY,JSON.stringify(c)); return true; }catch(e){ return false; } }
+function aiErr(kind,status,body){
+  let m;
+  if(kind==='http'){
+    if([401,403,404,413,429].includes(status)) m=A('e_'+status);
+    else{
+      let d=''; try{ d=(JSON.parse(body).error||{}).message||''; }catch(e){}
+      m=A('e_http')+status+(d?': '+String(d).slice(0,160):'');
+    }
+  } else m=A('e_'+kind);
+  const e=new Error(m); e.ai=true; e.kind=kind; return e;
+}
+async function aiFetch(path,opts,ms,sig,retry){
+  const c=aiCfg(); if(!c.key) throw aiErr('nokey');
+  if(!navigator.onLine) throw aiErr('offline');
+  for(let n=0;;n++){
+    if(sig&&sig.aborted) throw aiErr('cancel');
+    const ac=new AbortController(); const to=setTimeout(()=>ac.abort(),ms);
+    const onA=()=>ac.abort(); if(sig) sig.addEventListener('abort',onA,{once:true});
+    try{
+      const r=await fetch(c.base.replace(/\/+$/,'')+path,Object.assign({},opts,{signal:ac.signal,
+        headers:Object.assign({'Authorization':'Bearer '+c.key},opts.headers||{})}));
+      if(r.ok) return r;
+      if(r.status>=500&&retry&&n<1){ await aiSleep(1200); continue; }
+      throw aiErr('http',r.status,await r.text().catch(()=>''));
+    }catch(e){
+      if(e&&e.ai) throw e;
+      if(sig&&sig.aborted) throw aiErr('cancel');
+      if(ac.signal.aborted) throw aiErr('timeout');
+      if(retry&&n<1){ await aiSleep(1200); continue; }
+      throw aiErr('net');
+    }finally{ clearTimeout(to); if(sig) sig.removeEventListener('abort',onA); }
+  }
+}
+async function aiTranscribe(blob,name,lang,sig){
+  const c=aiCfg(); if(!c.key) throw aiErr('nokey'); if(!c.tModel) throw aiErr('nomodel');
+  const f=new FormData(); f.append('file',blob,name); f.append('model',c.tModel); if(lang) f.append('language',lang);
+  const r=await aiFetch('/audio/transcriptions',{method:'POST',body:f},180000,sig,false);
+  const j=await r.json().catch(()=>({}));
+  return String(j.text||'').trim();
+}
+async function aiChat(sys,user,sig){
+  const c=aiCfg(); if(!c.key) throw aiErr('nokey'); if(!c.cModel) throw aiErr('nomodel');
+  const r=await aiFetch('/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:c.cModel,messages:[{role:'system',content:sys},{role:'user',content:user}]})},90000,sig,true);
+  const j=await r.json().catch(()=>({}));
+  const t=j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;
+  if(!t||!String(t).trim()) throw aiErr('http',502,'');
+  return String(t).trim();
+}
+function aiDetect(s){
+  const ar=(s.match(/[\u0600-\u06FF]/g)||[]).length, la=(s.match(/[A-Za-z]/g)||[]).length;
+  if(ar+la<3) return null; return ar>la?'fa':'en';
+}
+/* glossary (stored in db.glossary; additive key, old backups still load) */
+const glList=()=>{ if(!Array.isArray(db.glossary)) db.glossary=[]; return db.glossary; };
+function glFor(text){ const low=text.toLowerCase();
+  return glList().filter(g=>(g.fa&&text.includes(g.fa))||(g.en&&low.includes(g.en.toLowerCase()))).slice(0,30); }
+function glValid(arr){
+  if(arr&&!Array.isArray(arr)&&Array.isArray(arr.entries)) arr=arr.entries;
+  if(!Array.isArray(arr)||arr.length>2000) throw new Error('bad');
+  return arr.map(x=>{
+    if(!x||typeof x!=='object') throw new Error('bad');
+    const fa=String(x.fa||'').trim().slice(0,200), en=String(x.en||'').trim().slice(0,200);
+    if(!fa||!en) throw new Error('bad');
+    return {id:uid(),fa,en,definition:String(x.definition||'').trim().slice(0,500),domain:String(x.domain||'').trim().slice(0,60)};
+  });
+}
+function glConflicts(fa,en,skip){ const l=en.toLowerCase();
+  return glList().filter(g=>g.id!==skip&&((g.fa===fa&&g.en.toLowerCase()!==l)||(g.en.toLowerCase()===l&&g.fa!==fa))); }
+function aiSys(mode,src,dst,entries){
+  const N={fa:'Persian',en:'English'};
+  let s;
+  if(mode==='tr') s='You are an academic translator for university, computer-engineering and AI content. Translate '+N[src]+' to '+N[dst]+'. Translate meaning accurately rather than word-for-word and keep the tone and technical specificity. Preserve paragraphs, lists and line breaks. When translating into Persian, keep established English technical terms, standard abbreviations and model names where appropriate. Never alter numbers, course codes or mathematical expressions. Do not summarize, explain or add anything. Output only the translation.';
+  else s='You correct academic text written in '+N[src]+'. Fix spelling, grammar, punctuation and obvious speech-recognition slips only where you are certain. Do not rewrite, summarize, translate or add content. Leave uncertain words unchanged. Preserve paragraphs, numbers, course codes, abbreviations and technical terms. Output only the corrected text.';
+  if(entries.length) s+='\nApproved glossary (guidance only: apply when the context matches; if a term has several equivalents choose by context):\n'+entries.map(g=>g.fa+' = '+g.en+(g.domain?' ['+g.domain+']':'')).join('\n');
+  return s;
+}
+
+function openAI(){
+  const cfg=aiCfg();
+  const S={busy:false,ctrl:null,rec:null,failed:[],edit:null,models:null};
+  const L=(l,id,inner)=>'<div class="field"><label class="flabel" for="'+id+'">'+esc(A(l))+'</label>'+inner+'</div>';
+  const langOpts=(withAuto,sel)=>(withAuto?'<option value="">'+esc(A('auto'))+'</option>':'')
+    +'<option value="fa"'+(sel==='fa'?' selected':'')+'>'+esc(A('fa'))+'</option><option value="en"'+(sel==='en'?' selected':'')+'>'+esc(A('en'))+'</option>';
+  const modelOpt=v=>v?'<option value="'+esc(v)+'" selected>'+esc(v)+'</option>':'<option value=""></option>';
+  const layer=showSheet(
+    '<div class="sheet-head"><span style="width:64px"></span><div class="sheet-title">'+esc(A('title'))+'</div>'
+    +'<button class="btn-ghost" data-close style="width:64px;text-align:end">'+esc(T('Close'))+'</button></div>'
+    +'<div class="sheet-body"><div class="aiw">'
+    +'<details id="aiSet"'+(cfg.key?'':' open')+'><summary>'+esc(A('set'))+'</summary><div class="aiw" style="margin-top:10px">'
+      +L('base','aiBase','<input id="aiBase" type="text" dir="ltr" autocomplete="off" value="'+esc(cfg.base)+'">')
+      +L('key','aiKey','<input id="aiKey" type="password" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(cfg.key)+'">')
+      +'<div class="dimtext" style="font-size:12px;line-height:1.5">'+esc(A('keyNote'))+'</div>'
+      +'<div class="r"><button class="b p" id="aiLoad">'+esc(A('load'))+'</button><button class="b d" id="aiClr">'+esc(A('clearKey'))+'</button></div>'
+      +L('tModel','aiTM','<select id="aiTM">'+modelOpt(cfg.tModel)+'</select>')
+      +L('cModel','aiCM','<select id="aiCM">'+modelOpt(cfg.cModel)+'</select>')
+    +'</div></details>'
+    +'<div class="aiw"><div class="r">'
+      +'<label class="b p" for="aiFile">'+esc(A('upload'))+'<input class="sr" id="aiFile" type="file" accept="audio/*,.m4a,.mp3,.wav,.flac,.ogg,.oga,.webm,.mp4,.mpeg,.mpga"></label>'
+      +'<button class="b p" id="aiRec">'+esc(A('rec'))+'</button><button class="b" id="aiStop" hidden>'+esc(A('stop'))+'</button>'
+      +'<button class="b" id="aiCancel" hidden>'+esc(A('cancel'))+'</button><button class="b" id="aiRetry" hidden>'+esc(A('retry'))+'</button></div>'
+      +L('spLang','aiSL','<select id="aiSL">'+langOpts(true,'')+'</select>')
+      +'<div class="st" id="aiSt" role="status" aria-live="polite"></div>'
+      +L('text','aiTx','<textarea id="aiTx" dir="auto"></textarea>')
+      +'<div class="r"><button class="b" data-copy="aiTx">'+esc(A('copy'))+'</button></div>'
+      +'<div class="r">'+L('from','aiFrom','<select id="aiFrom">'+langOpts(true,'')+'</select>')
+        +L('to','aiTo','<select id="aiTo">'+langOpts(false,'en')+'</select>')+'</div>'
+      +'<div class="r"><button class="b p" id="aiTr">'+esc(A('tr'))+'</button><button class="b p" id="aiRf">'+esc(A('rf'))+'</button><button class="b" id="aiSw">'+esc(A('swap'))+'</button></div>'
+      +L('out','aiOut','<textarea id="aiOut" dir="auto"></textarea>')
+      +'<div class="r"><button class="b" data-copy="aiOut">'+esc(A('copy'))+'</button></div>'
+      +L('noteT','aiNT','<input id="aiNT" type="text" dir="auto">')
+      +'<div class="r"><button class="b p" id="aiNote">'+esc(A('note'))+'</button></div>'
+    +'</div>'
+    +'<details id="aiGl"><summary>'+esc(A('gl'))+'</summary><div class="aiw" style="margin-top:10px">'
+      +'<div id="aiGlL"></div>'
+      +L('glFa','aiGF','<input id="aiGF" type="text" dir="rtl">')+L('glEn','aiGE','<input id="aiGE" type="text" dir="ltr">')
+      +L('glDom','aiGD','<input id="aiGD" type="text" dir="auto">')+L('glDef','aiGX','<input id="aiGX" type="text" dir="auto">')
+      +'<div class="r"><button class="b p" id="aiGA">'+esc(A('add'))+'</button><button class="b" id="aiGEx">'+esc(A('exp'))+'</button>'
+      +'<label class="b" for="aiGIm">'+esc(A('imp'))+'<input class="sr" id="aiGIm" type="file" accept="application/json,.json"></label>'
+      +'<button class="b d" id="aiGDA">'+esc(A('delAll'))+'</button></div>'
+    +'</div></details>'
+    +'</div></div>',{cls:'full'});
+  const q=s=>layer.querySelector(s);
+  const st=(m,k)=>{ const e=q('#aiSt'); e.className='st '+(k||''); e.textContent=m||''; };
+  const say=e=>st(e&&e.ai?e.message:(A('e_net')),'err');
+
+  /* cleanup: stop mic, abort requests (also when sheet is dismissed) */
+  let cleaned=false;
+  function cleanup(){ if(cleaned) return; cleaned=true; obs.disconnect();
+    if(S.ctrl) S.ctrl.abort(); recStop(true); }
+  const obs=new MutationObserver(()=>{ if(!document.body.contains(layer)) cleanup(); });
+  obs.observe($('#layers'),{childList:true});
+  q('[data-close]').onclick=()=>{ cleanup(); closeSheet(layer); };
+
+  function ui(){
+    const b=S.busy||!!S.rec;
+    ['#aiTr','#aiRf'].forEach(s=>q(s).disabled=S.busy);
+    q('#aiRec').disabled=S.busy||!!S.rec; q('#aiFile').disabled=b;
+    q('#aiRec').hidden=!!S.rec; q('#aiStop').hidden=!S.rec;
+    q('#aiCancel').hidden=!(S.busy||S.rec); q('#aiRetry').hidden=!S.failed.length||b;
+  }
+  async function run(task,msg){
+    if(S.busy){ st(A('e_busy'),'err'); return; }
+    S.busy=true; S.ctrl=new AbortController(); ui(); st(msg);
+    try{ await task(S.ctrl.signal); }
+    catch(e){ if(!cleaned) say(e); }
+    finally{ S.busy=false; S.ctrl=null; if(!cleaned) ui(); }
+  }
+  q('#aiCancel').onclick=()=>{ if(S.ctrl) S.ctrl.abort(); if(S.rec&&S.rec.ctrl) S.rec.ctrl.abort(); };
+  const append=t=>{ const x=q('#aiTx'); x.value=x.value?x.value+(S.rec?' ':'\n\n')+t:t; };
+
+  /* settings */
+  function saveCfg(){ const c=aiCfg(); c.base=q('#aiBase').value.trim(); c.key=q('#aiKey').value.trim();
+    c.tModel=q('#aiTM').value; c.cModel=q('#aiCM').value; aiSave(c); return c; }
+  q('#aiTM').onchange=q('#aiCM').onchange=saveCfg;
+  q('#aiClr').onclick=()=>{ q('#aiKey').value=''; saveCfg(); st(''); };
+  q('#aiLoad').onclick=()=>{
+    const c=saveCfg();
+    if(!/^https:\/\//i.test(c.base)){ st(A('e_url'),'err'); return; }
+    run(async sig=>{
+      const r=await aiFetch('/models',{method:'GET'},30000,sig,true);
+      const ids=((await r.json()).data||[]).map(m=>String(m.id)).sort();
+      const tm=ids.filter(i=>/whisper|transcribe/i.test(i));
+      const cm=ids.filter(i=>/^(gpt|chatgpt|o\d)/i.test(i)&&!/audio|realtime|transcribe|tts|image|embed|search|moderation|instruct|codex/i.test(i));
+      const fill=(sel,list,cur)=>{ const pick=list.includes(cur)?cur:(list.find(i=>/mini/i.test(i))||list[0]||'');
+        q(sel).innerHTML=list.map(i=>'<option value="'+esc(i)+'"'+(i===pick?' selected':'')+'>'+esc(i)+'</option>').join('')||'<option value=""></option>'; };
+      fill('#aiTM',tm,c.tModel); fill('#aiCM',cm,c.cModel); saveCfg(); st(A('s_ok'),'ok');
+    },A('s_load'));
+  };
+
+  /* audio file */
+  q('#aiFile').onchange=e=>{
+    const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
+    const ext=(f.name.split('.').pop()||'').toLowerCase();
+    if(!AI_EXT.includes(ext)){ st(A('e_type')+AI_EXT.join(', '),'err'); return; }
+    if(f.size>AI_MAX){ st(A('e_big'),'err'); return; }
+    if(!f.size){ st(A('e_empty'),'err'); return; }
+    run(async sig=>{
+      const t=await aiTranscribe(f,f.name,q('#aiSL').value,sig);
+      if(!t){ st(A('e_empty'),'err'); return; }
+      append(t); st(A('s_done'),'ok');
+    },A('s_trans'));
+  };
+
+  /* microphone: self-contained segments sent to the provider in order */
+  function recStop(silent){
+    const R=S.rec; if(!R) return; R.stop=true; clearTimeout(R.segT); clearInterval(R.tick);
+    if(R.mr&&R.mr.state==='recording'){ try{ R.mr.stop(); }catch(e){} }
+    else{ R.stream.getTracks().forEach(t=>t.stop()); }
+    if(silent) R.ctrl.abort();
+  }
+  function segment(){
+    const R=S.rec; if(!R||R.stop) return;
+    const mr=new MediaRecorder(R.stream,R.mt?{mimeType:R.mt}:{}); const parts=[];
+    mr.ondataavailable=e=>{ if(e.data&&e.data.size) parts.push(e.data); };
+    mr.onstop=()=>{
+      const type=mr.mimeType||R.mt||'audio/webm'; const blob=new Blob(parts,{type});
+      if(!R.stop) segment(); else R.stream.getTracks().forEach(t=>t.stop());
+      if(blob.size>1200) R.q=R.q.then(()=>segSend(R,blob));
+      if(R.stop) R.q.then(()=>{ if(S.rec===R){ S.rec=null; if(!cleaned){ ui(); if(!S.failed.length) st(A('s_done'),'ok'); } } });
+    };
+    mr.start(); R.mr=mr; R.segT=setTimeout(()=>{ if(mr.state==='recording') mr.stop(); },AI_SEG_MS);
+  }
+  async function segSend(R,blob){
+    if(R.ctrl.signal.aborted) return;
+    const ext=/mp4/.test(blob.type)?'m4a':/ogg/.test(blob.type)?'ogg':'webm';
+    try{ const t=await aiTranscribe(blob,'seg.'+ext,q('#aiSL').value,R.ctrl.signal); if(t&&!cleaned) append(t); }
+    catch(e){ if(e.kind!=='cancel'){ S.failed.push({blob,ext}); if(!cleaned) st(A('s_seg')+e.message,'err'); } }
+  }
+  q('#aiRec').onclick=async()=>{
+    if(S.rec||S.busy) return;
+    if(!window.isSecureContext||!navigator.mediaDevices||!window.MediaRecorder){ st(A('e_mic'),'err'); return; }
+    const c=aiCfg(); if(!c.key){ st(A('e_nokey'),'err'); return; } if(!c.tModel){ st(A('e_nomodel'),'err'); return; }
+    let stream;
+    try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch(e){ st(A(e&&e.name==='NotAllowedError'?'e_micDenied':'e_micErr'),'err'); return; }
+    if(cleaned){ stream.getTracks().forEach(t=>t.stop()); return; }
+    const mt=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported(t))||'';
+    const R=S.rec={stream,mt,stop:false,q:Promise.resolve(),ctrl:new AbortController(),t0:Date.now()};
+    S.failed=[]; ui();
+    const tick=()=>{ const s=Math.floor((Date.now()-R.t0)/1000); const e=q('#aiSt'); e.className='st rec';
+      e.innerHTML='<i></i>'+esc(A('s_rec'))+' '+pad(Math.floor(s/60))+':'+pad(s%60); };
+    tick(); R.tick=setInterval(tick,1000); segment();
+  };
+  q('#aiStop').onclick=()=>recStop(false);
+  q('#aiRetry').onclick=()=>{
+    const list=S.failed.slice(); S.failed=[];
+    run(async sig=>{ for(const f of list){ try{ const t=await aiTranscribe(f.blob,'seg.'+f.ext,q('#aiSL').value,sig); if(t) append(t); }
+      catch(e){ S.failed.push(f); throw e; } } st(A('s_done'),'ok'); },A('s_trans'));
+  };
+
+  /* translate / correct */
+  function langs(){ const t=q('#aiTx').value;
+    let s=q('#aiFrom').value||aiDetect(t)||(q('#aiTo').value==='en'?'fa':'en'); return {s,d:q('#aiTo').value}; }
+  q('#aiTr').onclick=()=>{
+    const t=q('#aiTx').value.trim(); if(!t){ st(A('e_text'),'err'); return; }
+    const {s,d}=langs(); if(s===d){ st(A('e_same'),'err'); return; }
+    run(async sig=>{ q('#aiOut').value=await aiChat(aiSys('tr',s,d,glFor(t)),t,sig); st(A('s_done'),'ok'); },A('s_tl'));
+  };
+  q('#aiRf').onclick=()=>{
+    const t=q('#aiTx').value.trim(); if(!t){ st(A('e_text'),'err'); return; }
+    const {s}=langs();
+    run(async sig=>{ q('#aiOut').value=await aiChat(aiSys('rf',s,s,glFor(t)),t,sig); st(A('s_done'),'ok'); },A('s_rf'));
+  };
+  q('#aiSw').onclick=()=>{ const f=q('#aiFrom'),t=q('#aiTo'); const a=f.value||langs().s, b=t.value;
+    f.value=b; t.value=a; const x=q('#aiTx'),o=q('#aiOut'); const v=x.value; x.value=o.value; o.value=v; };
+  layer.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{
+    const el=q('#'+b.dataset.copy); try{ await navigator.clipboard.writeText(el.value); }catch(e){ el.select(); document.execCommand&&document.execCommand('copy'); }
+    toast(A('copied')); });
+
+  /* save to notes (explicit user action only) */
+  q('#aiNote').onclick=()=>{
+    const a=q('#aiTx').value.trim(), o=q('#aiOut').value.trim(); if(!a&&!o){ st(A('e_text'),'err'); return; }
+    if(!confirm(A('s_saveq'))) return;
+    const body=[a,o].filter(Boolean).join('\n\n---\n\n');
+    const title=q('#aiNT').value.trim()||body.slice(0,40);
+    db.notes.push({id:uid(),createdAt:new Date().toISOString(),title,body,paperId:''});
+    saveDB(); render(); st(A('s_saved'),'ok');
+  };
+
+  /* glossary */
+  function glDraw(){
+    const l=glList(); q('#aiGlL').innerHTML=l.length?l.map(g=>'<div class="gl"><span dir="auto"><b>'+esc(g.fa)+'</b> → '+esc(g.en)
+      +(g.domain?' <small>['+esc(g.domain)+']</small>':'')+(g.definition?'<br><small>'+esc(g.definition)+'</small>':'')+'</span>'
+      +'<button class="b" data-ge="'+g.id+'">'+esc(A('edit'))+'</button><button class="b d" data-gd="'+g.id+'">'+esc(A('del'))+'</button></div>').join('')
+      :'<div class="dimtext">'+esc(A('glNone'))+'</div>';
+    q('#aiGA').textContent=A(S.edit?'upd':'add');
+  }
+  q('#aiGlL').onclick=e=>{
+    const ge=e.target.closest('[data-ge]'), gd=e.target.closest('[data-gd]');
+    if(ge){ const g=glList().find(x=>x.id===ge.dataset.ge); if(!g) return; S.edit=g.id;
+      q('#aiGF').value=g.fa; q('#aiGE').value=g.en; q('#aiGD').value=g.domain||''; q('#aiGX').value=g.definition||''; glDraw(); }
+    if(gd){ if(!confirm(A('s_sure'))) return; db.glossary=glList().filter(x=>x.id!==gd.dataset.gd); saveDB(); glDraw(); }
+  };
+  q('#aiGA').onclick=()=>{
+    const fa=q('#aiGF').value.trim(), en=q('#aiGE').value.trim(); if(!fa||!en){ st(T('Required field missing'),'err'); return; }
+    const rec={fa:fa.slice(0,200),en:en.slice(0,200),domain:q('#aiGD').value.trim().slice(0,60),definition:q('#aiGX').value.trim().slice(0,500)};
+    const cf=glConflicts(fa,en,S.edit);
+    if(cf.length&&confirm(A('s_conf').replace('{x}',cf.map(g=>g.fa+' = '+g.en).join('; ')))) db.glossary=glList().filter(g=>!cf.includes(g));
+    if(S.edit){ const g=glList().find(x=>x.id===S.edit); if(g) Object.assign(g,rec); }
+    else glList().push(Object.assign({id:uid()},rec));
+    S.edit=null; ['#aiGF','#aiGE','#aiGD','#aiGX'].forEach(s=>q(s).value=''); saveDB(); glDraw();
+  };
+  q('#aiGEx').onclick=()=>{
+    const data={format:'uni-pelan-glossary',version:1,entries:glList().map(g=>({fa:g.fa,en:g.en,definition:g.definition||'',domain:g.domain||''}))};
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+    a.download='uni-pelan-glossary-'+todayISO()+'.json'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  };
+  q('#aiGIm').onchange=e=>{
+    const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
+    if(f.size>2*1024*1024){ st(A('e_badfile'),'err'); return; }
+    const rd=new FileReader();
+    rd.onload=()=>{ try{
+      const add=glValid(JSON.parse(String(rd.result))); const l=glList();
+      add.forEach(n=>{ if(!l.some(g=>g.fa===n.fa&&g.en.toLowerCase()===n.en.toLowerCase())) l.push(n); });
+      saveDB(); glDraw(); st(A('s_done'),'ok');
+    }catch(err){ st(A('e_badfile'),'err'); } };
+    rd.readAsText(f);
+  };
+  q('#aiGDA').onclick=()=>{ if(!glList().length||!confirm(A('s_sure'))) return; db.glossary=[]; saveDB(); glDraw(); };
+  glDraw(); ui();
+}
+
+loadDB();
+render();
+</script>
+</body>
+</html>
